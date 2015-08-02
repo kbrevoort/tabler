@@ -18,14 +18,96 @@ tablerOpts <- function(showDepVar = TRUE,
 # pca stands for "paste - collapse - ampersand
 pca <- function(inVec) paste(inVec, collapse = ' & ')
 
-print.latex <- function(myTable,
-                        myOpts = tablerOpts(),
-                        outfile = NA,
-                        intitle = NA,
-                        inlabel = NA,
-                        rename = NA,
-                        suppress = NA,
-                        summarize = NA) {
+print_latex <- function(x, ...) {
+  if (is.null(attr(x, "class"))) {
+    stop("Must supply an object to print_latex")
+  } else {
+    UseMethod("print_latex")
+  }
+}
+
+print_latex.sumTableRec <- function(myTable,
+                                    myOpts = tablerOpts(),
+                                    outfile = NA,
+                                    intitle = NA,
+                                    inlabel = NA,
+                                    rename = NA,
+                                    suppress = NA) {
+
+  # This function will take a table object and print it to the screen in LaTeX format.
+  if (!class(myTable) == "sumTableRec") stop("Must supply valid sumTableRec object to print.latex")
+
+  # Output can be sent to the screen, a file, or both
+  if (!is.na(outfile)) {
+    sink(outfile, split = TRUE)
+    on.exit(sink())
+  }
+
+  # Number of columns of data in the table
+  numCols <- dim(myTable$values)[2]
+
+  cat("\\begin{table}[ht]\n")
+  if (!is.na(intitle)) cat(sprintf("\\caption{%s}\n", intitle))
+  cat("\\centering\n")
+  cat(sprintf("\\begin{tabular}{ll%s}\n", paste0(rep("c", numCols), collapse = "")))
+  cat("\\hline\\hline\n")
+
+  cat(sprintf(" & & %s \\\\ \n",
+              pca(sprintf("(%i)", 1:numCols))))
+
+  cat(sprintf(" & & %s \\\\ \n",
+              pca(colnames(myTable$values))))
+
+  cat("\\hline \n")
+
+  # This will cycle through the variables
+  for (i in seq_along(myTable$varNames)) {
+    thisVar <- myTable$varNames[i]
+
+    # If this variable is in the suppression list, skip to the next
+    if (thisVar %in% suppress) next
+
+    if (thisVar %in% names(myTable$xlevels)) {  # Factor variables
+      outVar <- thisVar
+      if (thisVar %in% names(rename)) outVar <- rename[[thisVar]]
+      cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n",
+                  outVar,
+                  pca(rep(' ', numCols))))
+
+      # Print out a line with just the variable name
+      for (j in myTable$xlevels[[thisVar]]) {
+        factVar <- paste0(thisVar, j)
+        outLine <- pca(prettyNum(myTable$values[factVar, ],
+                                 big.mark = ',',
+                                 digits = 3))
+        if (j %in% names(rename)) j <- rename[[j]]
+        cat(sprintf(" & %s & %s \\\\ \n", j, outLine))
+      }
+    } else {  # Not a factor variable
+      outLine <- pca(prettyNum(myTable$values[thisVar, ],
+                               big.mark = ',',
+                               digits = 3))
+
+      if (thisVar %in% names(rename)) thisVar <- rename[[thisVar]]
+      cat(sprintf("\\multicolumn{2}{l}{%s} & & %s \\\\ \n", thisVar, outLine))
+    }
+  }
+
+  cat("\\hline \n")
+  cat("\\end{tabular} \n")
+  if (!is.na(inlabel)) cat(sprintf("\\label{%s} \n", inlabel))
+  cat("\\end{table} \n")
+
+}
+
+print_latex.tableRec <- function(myTable,
+                                 myOpts = tablerOpts(),
+                                 outfile = NA,
+                                 intitle = NA,
+                                 inlabel = NA,
+                                 rename = NA,
+                                 suppress = NA,
+                                 summarize = NA) {
   # This function will take a table object and print it to the screen in LaTeX format.
 
   if (!class(myTable) == "tableRec") stop("Must supply valid tableRec object to print.latex")
