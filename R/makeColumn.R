@@ -14,6 +14,17 @@
 
 #' Make Column object from single lm result.
 #'
+#' @param inResult An object containing the results of a statistical estimation
+#' @return Results a colRec object
+#' @example
+#' makeColumn(inResult)
+#' @export
+#'
+makeColumn <- function(inResult) {
+  UseMethod("makeColumn")
+}
+
+
 makeColumn.lm <- function(inResult) {
 
   inSummary <- summary(inResult)
