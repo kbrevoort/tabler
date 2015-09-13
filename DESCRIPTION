@@ -1,10 +1,10 @@
 Package: tabler
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1
+Title: Produce Coefficient Tables in R
+Version: 0.0.0.9000
 Date: 2015-07-17
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
+Author: Kenneth Brevoort
+Maintainer: Kenneth Brevoort <ken@brevoort.com>
+Description: This package contains functions to produce tables of coefficient results in R in formats (LaTeX, HTML, and RMarkdown) that can be easily used in documents created by Knitr.
 License: What license is it under?
 LazyData: TRUE
