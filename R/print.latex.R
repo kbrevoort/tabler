@@ -1,19 +1,3 @@
-tablerOpts <- function(showDepVar = TRUE,
-                    showMethod = TRUE,
-                    digits = c(3,2),
-                    sigLevels = c('***'=0.01, '**' = 0.05, '*' = 0.1)) {
-
-  optsList <- list()
-  attr(optsList, "class") <- "tableROpts"
-  optsList$showDepVar <- showDepVar
-  optsList$showMethod <- showMethod
-
-  optsList$digits <- digits
-  if (length(digits) == 1) optsList$digits <- c(digits, digits)
-
-  optsList$sigLevels <- sort(sigLevels)
-  return(optsList)
-}
 
 # pca stands for "paste - collapse - ampersand
 pca <- function(inVec) paste(inVec, collapse = ' & ')
