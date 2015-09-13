@@ -1,16 +1,24 @@
-#' Make a table object from a list of column objects.
+#' Make a tabler object
 #'
-#' This function pulls all of the necessary data elements out of the column
-#' objects passed as an argument.  It then creates a table object that can
-#' be passed to one of the output functions.
-makeTable <- function( inCols=list(), title="NA", notes="NA", number=-1 ) {
+#' This function produces the underlying tabler object
+#' @export
+tabler <- function(...) {
 
-  # This function will take a series of column objects
+  inCols <- list(...)
+
+  # Check to make sure that every element of inList is a colRec
+  for (i in seq_along(inCols)) {
+    if (class(inCols[[i]]) != "colRec") {
+      inCols[i] <- makeColumn(inList[[i]])
+    }
+  }
+
+  # Create the tabler object
   myTable <- list()
-  attr(myTable, "class") <- "tableRec"
-  myTable$title <- title
-  myTable$notes <- notes
-  myTable$number <- number
+  attr(myTable, "class") <- "tablerObject"
+  myTable$title <- NA
+  myTable$notes <- NA
+  myTable$number <- NA
 
   myTable$depVars <- unlist(lapply(inCols, function(x) x$depVar))
   myTable$varNames <- unique(unlist(lapply(inCols, function(x) x$varNames)))
@@ -41,8 +49,52 @@ makeTable <- function( inCols=list(), title="NA", notes="NA", number=-1 ) {
       temp[[myLevel]] <- temp[[myLevel]][-which(is.na(temp[[myLevel]]))]
     }
   }
-  #print(temp)
   myTable$xlevels <- temp
+
+  myTable$theme <- tabler_theme() # Set the theme values as defaults
 
   return(myTable)
 }
+
+
+`+.tablerObject` <- function(myTable, inObject) {
+  if (class(inObject) == "tablerTheme") myTable$theme <- inObject
+  else {
+    if (class(inObject) != "colRec") inObject <- makeColumn(inObject)
+
+    myTable$depVars <- c(myTable$depVars, inObject$depVar)
+    myTable$varNames <- unique(c(myTable$varNames, inObject$varNames))
+    myTable$estTypes <- c(myTable$estTypes, inObject$estType)
+
+    # Stack the coefficient data.frames
+    inObject$coefs$estNum <- max(myTable$coefs$estNum) + 1
+    myTable$coefs <- rbind(myTable$coefs, inObject$coefs)
+
+    # Combine the gof data.frames.  This is complicated because the statistics will differ across
+    # the columns.
+    newNames <- names(inObject$gofs)[inObject$gofs %notin% names(myTable(gofs))]
+    myTable$gofs[, newNames] <- NA
+    emptyNames <- names(myTable$gofs)[myTable$gofs %notin% names(inObject$gofs)]
+    inObject$gofs[, emptyNames] <- NA
+    myTable$gofs <- rbind(myTable$gofs, inObject$gofs[, names(myTable$gofs)])
+
+    # Consolidate xlevels
+    # There must be a more efficient way to do this.
+    temp <- list()
+    myXLevels <- unique(c(names(myTable$xlevels), names(inObject$xlevels)))
+    for (myLevel in myXLevels) {
+      if (myLevel %in% names(myTable$xlevels)) {
+        if (myLevel %in% names(inObject$xlevels)) {
+          temp[[myLevel]] <- unique(c(myTable$xlevels[[myLevel]], inObject$xlevels[[myLevel]]))
+        } else {
+          temp[[myLevel]] <- myTable$xlevels[[myLevel]]
+        }
+      } else {
+        temp[[myLevel]] <- inObject$xlevels[[myLevel]]
+      }
+    }
+    myTable$xlevels <- temp
+  }
+
+}
+

@@ -39,6 +39,7 @@ tablerObjects are S3 objects that hold the combined information of the table.
 | xlevels | List | List of levels associated with each factor variable |
 | coefs | data.frame | Stacked data frame that contains all of the coefficient tables |
 | gofs | data.frame | Stacked data frame that contains all of the goodness of fit statistics |
+| theme | tablerTheme | Tabler theme description |
 
 
 
