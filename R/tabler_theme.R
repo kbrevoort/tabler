@@ -18,12 +18,16 @@ tabler_theme <- function(showDepVar = TRUE,
                        showMethod = TRUE,
                        digits = c(3,2),
                        sigLevels = c('***'=0.01, '**' = 0.05, '*' = 0.1),
-                       order = "N") {
+                       style = 'markdown',
+                       order = "=NMD-C-G=") {
 
   themeElements <- list()
   attr(themeElements, "class") <- "tablerTheme"
   themeElements$showDepVar <- showDepVar
   themeElements$showMethod <- showMethod
+  themeElements$style <- style
+
+  themeElements$order <- order
 
   themeElements$digits <- digits
   if (length(digits) == 1) themeElements$digits <- c(digits, digits)

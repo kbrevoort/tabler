@@ -3,13 +3,12 @@
 #' This function produces the underlying tabler object
 #' @export
 tabler <- function(...) {
-
   inCols <- list(...)
 
-  # Check to make sure that every element of inList is a colRec
+  # Check to make sure that every element of inCols is a colRec
   for (i in seq_along(inCols)) {
     if (class(inCols[[i]]) != "colRec") {
-      inCols[i] <- makeColumn(inList[[i]])
+      inCols[[i]] <- makeColumn(inCols[[i]])
     }
   }
 
@@ -53,6 +52,9 @@ tabler <- function(...) {
 
   myTable$theme <- tabler_theme() # Set the theme values as defaults
 
+  # Order the coefficient vector
+  myTable$coefs <- variableOrder(myTable$varNames, myTable$xlevels, myTable$coefs)
+
   return(myTable)
 }
 
@@ -72,11 +74,11 @@ tabler <- function(...) {
 
     # Combine the gof data.frames.  This is complicated because the statistics will differ across
     # the columns.
-    newNames <- names(inObject$gofs)[inObject$gofs %notin% names(myTable(gofs))]
+    newNames <- names(inObject$gof)[names(inObject$gof) %notin% names(myTable$gofs)]
     myTable$gofs[, newNames] <- NA
-    emptyNames <- names(myTable$gofs)[myTable$gofs %notin% names(inObject$gofs)]
-    inObject$gofs[, emptyNames] <- NA
-    myTable$gofs <- rbind(myTable$gofs, inObject$gofs[, names(myTable$gofs)])
+    emptyNames <- names(myTable$gofs)[names(myTable$gofs) %notin% names(inObject$gof)]
+    inObject$gof[, emptyNames] <- NA
+    myTable$gofs <- rbind(myTable$gofs, inObject$gof[, names(myTable$gofs)])
 
     # Consolidate xlevels
     # There must be a more efficient way to do this.
@@ -96,5 +98,9 @@ tabler <- function(...) {
     myTable$xlevels <- temp
   }
 
+  # Order the coefficient vector
+  myTable$coefs <- variableOrder(myTable$varNames, myTable$xlevels, myTable$coefs)
+
+  myTable
 }
 
