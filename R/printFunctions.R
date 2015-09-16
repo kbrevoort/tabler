@@ -1,4 +1,9 @@
-
+#' Print Method for Tabler Object
+#'
+#' @params myTable Tabler Object
+#' @examples
+#' print(myTable)
+#' @export
 print.tablerObject <- function(myTable) {
   if (myTable$theme$style == 'markdown') print_markdown(myTable)
   else if (myTable$theme$style == 'latex') print_latex(myTable)
@@ -53,13 +58,18 @@ print_latex <- function(myTable) {
       # The coefficient output process will have two steps.  First, create a data frame with the properly
       # fomatted values (as characters).  Second, output these values in the LaTeX format.  The first
       # step will allow the underlying code to be the same for all output formats.
+      coefMat <- tabulateCoef(myTable$coefs, myTable$theme)
+      for (i in 1:dim(coefMat)[1]) {
+        cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n", rownames(coefMat)[i], pca(coefMat[i, ])))
+      }
     }
     else if (thisChar == 'G') {
       # The Goodness of fit process will follow the same two step process as the coefficient output:  Get
       # properly formatted output and then output to the screen.
-      gofMat <- tabulate(myTable$gofs, myTable$theme)
-
-
+      gofMat <- tabulateGOF(myTable$gofs, myTable$theme)
+      for (i in 1:dim(gofMat)[1]) {
+        cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n", rownames(gofMat)[i], pca(gofMat[i, ])))
+      }
     }
     else warning(sprintf('Invalid element in theme order string:  %s', thisChar))
   }
@@ -70,11 +80,16 @@ print_latex <- function(myTable) {
   cat("\\end{table} \n")
 }
 
+tabulateCoef <- function(coefs, theme) {
+
+}
+
 tabulateGOF <- function(gofs, theme) {
   outDF <- data.frame(t(gofs))
 
   # Using the square brackets preserves the output as a data.frame
   outDF[] <- lapply(outDF, function(x) prettyNum(x, digits = theme$digits[1], big.mark = ','))
+  outDF
 }
 
 #   cat("\\hline\\hline\n")
