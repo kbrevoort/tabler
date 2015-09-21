@@ -11,15 +11,15 @@
 # xlevels: "character"
 # coefs:  "matrix"
 # gofs: "data.frame"
+NULL
 
 #' Make Column object from single lm result.
 #'
 #' @param inResult An object containing the results of a statistical estimation
 #' @return Results a colRec object
-#' @example
+#' @examples
 #' makeColumn(inResult)
 #' @export
-#'
 makeColumn <- function(inResult) {
   UseMethod("makeColumn")
 }

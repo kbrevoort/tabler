@@ -18,6 +18,7 @@ tabler <- function(...) {
   myTable$title <- NA
   myTable$notes <- NA
   myTable$number <- NA
+  myTable$latex_label <- NA
 
   myTable$depVars <- unlist(lapply(inCols, function(x) x$depVar))
   myTable$varNames <- unique(unlist(lapply(inCols, function(x) x$varNames)))

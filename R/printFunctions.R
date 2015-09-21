@@ -5,7 +5,7 @@
 #' print(myTable)
 #' @export
 print.tablerObject <- function(myTable) {
-  if (myTable$theme$style == 'markdown') print_markdown(myTable)
+  if (myTable$theme$style == 'markdown') print_latex(myTable)
   else if (myTable$theme$style == 'latex') print_latex(myTable)
   else print_html(myTable)
 }
@@ -53,14 +53,21 @@ print_latex <- function(myTable) {
       if (myTable$theme$colNumberStyle == 'parenthetic') outVec <- sprintf('(%i)', outVec)
       else if (myTable$theme$colNumberStyle == 'roman') outVec <- as.roman(outVec)
       else outVec <- as.character(outVec)
+      cat(sprintf(" & & %s \\\\ \n", pca(outVec)))
     }
     else if (thisChar == 'C') {
       # The coefficient output process will have two steps.  First, create a data frame with the properly
       # fomatted values (as characters).  Second, output these values in the LaTeX format.  The first
       # step will allow the underlying code to be the same for all output formats.
-      coefMat <- tabulateCoef(myTable$coefs, myTable$theme)
-      for (i in 1:dim(coefMat)[1]) {
-        cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n", rownames(coefMat)[i], pca(coefMat[i, ])))
+      coefList <- tabulateCoef(myTable$coefs, myTable$theme)
+      for (i in 1:length(coefList)) {
+        #browser()
+        cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n & & %s \\\\ \n",
+                    coefList[[i]][1],
+                    pca(coefList[[i]][2:(numCols+1)]),
+                    pca(coefList[[i]][(numCols + 2):(2*numCols + 1)],
+                        pre = "(",
+                        post = ")")))
       }
     }
     else if (thisChar == 'G') {
@@ -76,12 +83,29 @@ print_latex <- function(myTable) {
 
   # Close out the LaTeX table
   cat("\\end{tabular} \n")
-  if (!is.na(inlabel)) cat(sprintf("\\label{%s} \n", inlabel))
+  if (!is.na(myTable$latex_label)) cat(sprintf("\\label{%s} \n", myTable$latex_label))
   cat("\\end{table} \n")
 }
 
 tabulateCoef <- function(coefs, theme) {
+  numCols <- max(coefs$estNum)
+  numVars <- max(coefs$order)
 
+  outVec <- vector('list', numVars)  # pre-allocate list
+
+  for (i in 1:numVars) {
+    if (i %in% coefs$order) {
+      thisRow <- coefs[coefs$order == i, ]
+      line1 <- rep("", numCols)
+      line2 <- rep("", numCols)
+
+      line1[thisRow$estNum] <- prettyNum(thisRow$est, digits = theme$digits[1])
+      line2[thisRow$estNum] <- prettyNum(thisRow$std, digits = theme$digits[2])
+
+      outVec[[i]] <- c(thisRow[1,1], line1, line2)
+    }
+  }
+  outVec
 }
 
 tabulateGOF <- function(gofs, theme) {
@@ -92,86 +116,3 @@ tabulateGOF <- function(gofs, theme) {
   outDF
 }
 
-#   cat("\\hline\\hline\n")
-#
-#   if (myOpts$showMethod) cat(sprintf("  \\multicolumn{2}{r}{Method:} & %s \\\\ \n",
-#                                      pca(myTable$estTypes)))
-#
-#   if (myOpts$showDepVar) cat(sprintf("  \\multicolumn{2}{r}{Dep. Variable:} & %s \\\\ \n",
-#                                      pca(myTable$depVars)))
-#
-#   cat(sprintf(" & & %s \\\\ \n",
-#               pca(sprintf("(%i)", 1:numCols))))
-#   cat("\\hline \n")
-#
-#   # This will cycle through the variables
-#   for (i in seq_along(myTable$varNames)) {
-#     thisVar <- myTable$varNames[i]
-#
-#     # If this variable is in the suppression list, skip to the next
-#     if (thisVar %in% suppress) next
-#
-#     if (thisVar %in% names(myTable$xlevels)) {  # Factor variables
-#       outVar <- thisVar
-#       if (thisVar %in% names(rename)) outVar <- rename[[thisVar]]
-#       cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n",
-#                   outVar,
-#                   pca(rep(' ', numCols))))
-#
-#       # Print out a line with just the variable name
-#       for (j in myTable$xlevels[[thisVar]]) {
-#         outLine <- generateOut(thisVar, j, coefMat = myTable$coefs, suppress, myOpts)
-#         if (outLine == "") next
-#         if (j %in% names(rename)) j <- rename[[j]]
-#         cat(sprintf(" & %s & %s", j, outLine))
-#       }
-#     } else {  # Not a factor variable
-#       outLine <- generateOut(thisVar, "", coefMat = myTable$coefs, suppress = suppress, myOpts = myOpts)
-#       if (outLine == "") next
-#       if (thisVar %in% names(rename)) thisVar <- rename[[thisVar]]
-#       cat(sprintf("%s & & %s", thisVar, outLine))
-#     }
-#   }
-#
-#   # Now deal with the summarized variables
-#   if (!is.na(summarize)) {
-#     for (myVar in summarize) {
-#       outLine <- rep(" ", numCols)
-#       myEstNums <- NULL
-#       if (myVar %in% names(myTable$xlevels)) { # myVar is a factor
-#         for (myFact in myTable$xlevels[[myVar]]) {
-#           thisVar <- paste0(myVar, myFact)
-#           myEstNums <- c(myEstNums, myTable$coefs[myTable$coefs[['varName']] == thisVar, 'estNum'])
-#         }
-#         myEstNums <- unique(myEstNums)
-#       } else { # myVar is not a factor
-#         myEstNums <- myTable$coefs[myTable$coefs[['varName']] == myVar, 'estNum']
-#       }
-#       outLine[myEstNums] <- "Y"
-#       if (myVar %in% names(rename)) myVar <- rename[[myVar]]
-#       cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n",
-#                   myVar,
-#                   pca(outLine)))
-#     }
-#   }
-#
-#   # Now add goodness of fit statistics
-#   cat("\\hline \n")
-#
-#   for (fitStat in names(myTable$gofs)) {
-#     # Calculate the appropriate number of digits
-#     numScale <- log10(max(abs(myTable$gofs[[fitStat]])))
-#     cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n",
-#                 fitStat,
-#                 pca(prettyNum(myTable$gofs[[fitStat]],
-#                               big.mark = ",",
-#                               digits = myOpts$digits[1],
-#                               preserve.width = "none"))))
-#   }
-#
-#   cat("\\hline \n")
-#   cat("\\end{tabular} \n")
-#   if (!is.na(inlabel)) cat(sprintf("\\label{%s} \n", inlabel))
-#   cat("\\end{table} \n")
-#
-# }

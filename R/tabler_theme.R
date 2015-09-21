@@ -19,6 +19,7 @@ tabler_theme <- function(showDepVar = TRUE,
                        digits = c(3,2),
                        sigLevels = c('***'=0.01, '**' = 0.05, '*' = 0.1),
                        style = 'markdown',
+                       colNumberStyle = "parenthetic",  # Can also be 'roman'
                        order = "=NMD-C-G=") {
 
   themeElements <- list()
@@ -26,8 +27,9 @@ tabler_theme <- function(showDepVar = TRUE,
   themeElements$showDepVar <- showDepVar
   themeElements$showMethod <- showMethod
   themeElements$style <- style
+  themeElements$colNumberStyle <- colNumberStyle
 
-  themeElements$order <- order
+  themeElements$order <- toupper(order)
 
   themeElements$digits <- digits
   if (length(digits) == 1) themeElements$digits <- c(digits, digits)
