@@ -14,26 +14,29 @@
 #' sigLevels = c('***' = 0.01, '**' = 0.05, '*' = 0.1)
 #' @return tablerTheme object
 #' @export
-tabler_theme <- function(showDepVar = TRUE,
-                       showMethod = TRUE,
-                       digits = c(3,2),
-                       sigLevels = c('***'=0.01, '**' = 0.05, '*' = 0.1),
-                       style = 'markdown',
-                       colNumberStyle = "parenthetic",  # Can also be 'roman'
-                       order = "=NMD-C-G=") {
+tabler_theme <- function(show_dep_var = TRUE,
+                         show_method = TRUE,
+                         digits = c(3,2),
+                         sigLevels = c('***'=0.01, '**' = 0.05, '*' = 0.1),
+                         style = 'markdown',
+                         colNumberStyle = "parenthetic",  # Can also be 'roman'
+                         order = "=NMD-C-G=") {
 
-  themeElements <- list()
-  attr(themeElements, "class") <- "tablerTheme"
-  themeElements$showDepVar <- showDepVar
-  themeElements$showMethod <- showMethod
-  themeElements$style <- style
-  themeElements$colNumberStyle <- colNumberStyle
+  # Validate data
+  if (length(digits) != 2) stop('Invalid digits parameter set in tabler_theme')
 
-  themeElements$order <- toupper(order)
+  elements <- list()
+  attr(elements, "class") <- "tabler_theme"
+  elements$show_dep_var <- show_dep_var
+  elements$show_method <- show_method
+  elements$style <- style
+  elements$colNumberStyle <- colNumberStyle
 
-  themeElements$digits <- digits
-  if (length(digits) == 1) themeElements$digits <- c(digits, digits)
+  elements$order <- toupper(order)
 
-  themeElements$sigLevels <- sort(sigLevels)
-  return(themeElements)
+  elements$digits <- digits
+  if (length(digits) == 1) elements$digits <- c(digits, digits)
+
+  elements$sigLevels <- sort(sigLevels)
+  elements
 }

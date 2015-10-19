@@ -1,6 +1,4 @@
 
-# pca stands for "paste - collapse - ampersand
-pca <- function(inVec) paste(inVec, collapse = ' & ')
 
 print_latex <- function(x, ...) {
   if (is.null(attr(x, "class"))) {

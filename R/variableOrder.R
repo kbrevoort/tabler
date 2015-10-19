@@ -1,14 +1,14 @@
-variableOrder <- function(varNames, xlevels, coefs) {
+order_variables <- function(var_names, xlevels, coefs) {
   # Get rid of existing order number if it exists.  The new order number will
   # be added in this function
   if ('order' %in% names(coefs)) coefs$order <- NULL
 
-  outVars <- "(Intercept)"
+  out_vars <- "(Intercept)"
 
-  for (thisVar in varNames) {
-    if (grepl(":", thisVar)) {  # Variable is an interaction
+  for (this_var in var_names) {
+    if (grepl(":", this_var)) {  # Variable is an interaction
       templist <- NULL
-      myVars <- strsplit(thisVar, ":")[[1]]
+      myVars <- strsplit(this_var, ":")[[1]]
       for (i1 in myVars) {
         if (i1 %in% names(xlevels)) {  # Factor
           if (is.null(templist)) {
@@ -26,22 +26,22 @@ variableOrder <- function(varNames, xlevels, coefs) {
       }
       alloptions <- expand.grid(templist)
       varList <- apply(alloptions, 1, function(x) paste(x, collapse = ':'))
-      outVars <- c(outVars, varList)
-    } else if (thisVar %in% names(xlevels)) {  # Variable is a factor
-      outVars <- c(outVars, sprintf('%s%s', thisVar, xlevels[[thisVar]]))
+      out_vars <- c(out_vars, varList)
+    } else if (this_var %in% names(xlevels)) {  # Variable is a factor
+      out_vars <- c(out_vars, sprintf('%s%s', this_var, xlevels[[this_var]]))
     } else {
-      outVars <- c(outVars, thisVar)
+      out_vars <- c(out_vars, this_var)
     }
   }
-  nameOrder <- data.frame(outVars, order = seq(from = 1, to = length(outVars), by = 1))
+  name_order <- data.frame(out_vars, order = seq(from = 1, to = length(out_vars), by = 1))
 
   # I want to make sure that I don't drop any observations, so this section
   # looks for variables that do not appear in nameOrder and adds them to the end
   # of the list if found
-  addNames <- coefs$varname[unique(coefs$varName) %notin% nameOrder]
-  numNew <- length(addNames)
-  if (numNew > 0) rbind(nameOrder, cbind(addNames, max(coefs$estNum) + c(1:numNew)))
+  add_names <- coefs$var_name[unique(coefs$var_name) %notin% name_order]
+  num_new <- length(add_names)
+  if (num_new > 0) rbind(name_order, cbind(add_names, max(coefs$est_num) + c(1:num_new)))
 
-  withOrder <- merge(coefs, nameOrder, by.x = 'varName', by.y = 'outVars')
-  withOrder[order(withOrder$order, withOrder$estNum), ]
+  with_order <- merge(coefs, name_order, by.x = 'var_name', by.y = 'out_vars')
+  with_order[order(with_order$order, with_order$est_num), ]
 }

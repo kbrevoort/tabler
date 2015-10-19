@@ -1,27 +1,27 @@
 #' Print Method for Tabler Object
 #'
-#' @params myTable Tabler Object
+#' @params in_table Tabler Object
 #' @examples
-#' print(myTable)
+#' print(in_table)
 #' @export
-print.tablerObject <- function(myTable) {
-  if (myTable$theme$style == 'markdown') print_latex(myTable)
-  else if (myTable$theme$style == 'latex') print_latex(myTable)
-  else print_html(myTable)
+print.tablerObject <- function(in_tabler) {
+  if (in_tabler$theme$style == 'markdown') print_latex(in_tabler)
+  else if (in_tabler$theme$style == 'latex') print_latex(in_tabler)
+  else print_html(in_tabler)
 }
 
 #' Print as a LaTeX Table.
 #'
 #' Prints a tablerObject as a properly formatted latex table.
 #'
-#' @param myTable tablerObject for printing
+#' @param in_tabler tablerObject for printing
 #'
 #' @return NULL
 #' @examples
-#' print_latex(myTable)
-print_latex <- function(myTable) {
+#' print_latex(in_tabler)
+print_latex <- function(in_tabler) {
 
-  if (!class(myTable) == "tablerObject") stop("Must supply valid tablerObject to print")
+  if (!class(in_tabler) == "tablerObject") stop("Must supply valid tablerObject to print")
 
   # Make sure anything in summarize is also in suppress (summarized variables will be handled
   # at the end of the program)
@@ -34,24 +34,24 @@ print_latex <- function(myTable) {
   #}
 
   # Number of columns of data in the table
-  numCols <- length(myTable$depVars)
+  numCols <- length(in_tabler$depVars)
 
   cat("\\begin{table}[ht]\n")
-  if (!is.na(myTable$title)) cat(sprintf("\\caption{%s}\n", myTable$title))
+  if (!is.na(in_tabler$title)) cat(sprintf("\\caption{%s}\n", in_tabler$title))
   cat("\\centering\n")
   cat(sprintf("\\begin{tabular}{ll%s}\n", paste0(rep("c", numCols), collapse = "")))
 
   # Now cycle through the oder in tabler theme order
-  for (i in seq(nchar(myTable$theme$order))) {
-    thisChar <- substr(myTable$theme$order, i, i)
+  for (i in seq(nchar(in_tabler$theme$order))) {
+    thisChar <- substr(in_tabler$theme$order, i, i)
     if (thisChar == '=') cat("\\hline\\hline\n")
     else if (thisChar == '-') cat("\\hline\n")
-    else if (thisChar == 'D') cat(sprintf("\\multicolumn{2}{r}{Dep. Variable:} & %s \\\\ \n", pca(myTable$depVar)))
-    else if (thisChar == 'M') cat(sprintf("\\multicolumn{2}{r}{Method:} & %s \\\\ \n" , pca(myTable$estTypes)))
+    else if (thisChar == 'D') cat(sprintf("\\multicolumn{2}{r}{Dep. Variable:} & %s \\\\ \n", pca(in_tabler$depVar)))
+    else if (thisChar == 'M') cat(sprintf("\\multicolumn{2}{r}{Method:} & %s \\\\ \n" , pca(in_tabler$estTypes)))
     else if (thisChar == 'N') {
       outVec <- c(1:numCols)
-      if (myTable$theme$colNumberStyle == 'parenthetic') outVec <- sprintf('(%i)', outVec)
-      else if (myTable$theme$colNumberStyle == 'roman') outVec <- as.roman(outVec)
+      if (in_tabler$theme$colNumberStyle == 'parenthetic') outVec <- sprintf('(%i)', outVec)
+      else if (in_tabler$theme$colNumberStyle == 'roman') outVec <- as.roman(outVec)
       else outVec <- as.character(outVec)
       cat(sprintf(" & & %s \\\\ \n", pca(outVec)))
     }
@@ -59,7 +59,7 @@ print_latex <- function(myTable) {
       # The coefficient output process will have two steps.  First, create a data frame with the properly
       # fomatted values (as characters).  Second, output these values in the LaTeX format.  The first
       # step will allow the underlying code to be the same for all output formats.
-      coefList <- tabulateCoef(myTable$coefs, myTable$theme)
+      coefList <- tabulateCoef(in_tabler$coefs, in_tabler$theme)
       for (i in 1:length(coefList)) {
         #browser()
         cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n & & %s \\\\ \n",
@@ -73,7 +73,7 @@ print_latex <- function(myTable) {
     else if (thisChar == 'G') {
       # The Goodness of fit process will follow the same two step process as the coefficient output:  Get
       # properly formatted output and then output to the screen.
-      gofMat <- tabulateGOF(myTable$gofs, myTable$theme)
+      gofMat <- tabulateGOF(in_tabler$gofs, in_tabler$theme)
       for (i in 1:dim(gofMat)[1]) {
         cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n", rownames(gofMat)[i], pca(gofMat[i, ])))
       }
@@ -83,11 +83,166 @@ print_latex <- function(myTable) {
 
   # Close out the LaTeX table
   cat("\\end{tabular} \n")
-  if (!is.na(myTable$latex_label)) cat(sprintf("\\label{%s} \n", myTable$latex_label))
+  if (!is.na(in_tabler$latex_label)) cat(sprintf("\\label{%s} \n", in_tabler$latex_label))
   cat("\\end{table} \n")
 }
 
-tabulateCoef <- function(coefs, theme) {
+#' Print as a Markdown Table.
+#'
+#' Prints a tablerObject as a properly formatted R Markdown table.
+#'
+#' @param in_tabler tablerObject for printing
+#'
+#' @return NULL
+#' @examples
+#' print_markdown(in_tabler)
+print_markdown <- function(in_tabler) {
+
+  if (!class(in_tabler) == "tablerObject") stop("Must supply valid tablerObject to print")
+
+  # Make sure anything in summarize is also in suppress (summarized variables will be handled
+  # at the end of the program)
+  #if (!is.na(summarize)) suppress <- unique(c(suppress, summarize))
+
+  # Output can be sent to the screen, a file, or both
+  #if (!is.na(outfile)) {
+  #  sink(outfile, split = TRUE)
+  #  on.exit(sink())
+  #}
+
+  # Number of columns of data in the table
+  numCols <- length(in_tabler$depVars)
+
+  cat("\\begin{table}[ht]\n")
+  if (!is.na(in_tabler$title)) cat(sprintf("\\caption{%s}\n", in_tabler$title))
+  cat("\\centering\n")
+  cat(sprintf("\\begin{tabular}{ll%s}\n", paste0(rep("c", numCols), collapse = "")))
+
+  # Now cycle through the oder in tabler theme order
+  for (i in seq(nchar(in_tabler$theme$order))) {
+    thisChar <- substr(in_tabler$theme$order, i, i)
+    if (thisChar == '=') cat("\\hline\\hline\n")
+    else if (thisChar == '-') cat("\\hline\n")
+    else if (thisChar == 'D') cat(sprintf("\\multicolumn{2}{r}{Dep. Variable:} & %s \\\\ \n", pca(in_tabler$depVar)))
+    else if (thisChar == 'M') cat(sprintf("\\multicolumn{2}{r}{Method:} & %s \\\\ \n" , pca(in_tabler$estTypes)))
+    else if (thisChar == 'N') {
+      outVec <- c(1:numCols)
+      if (in_tabler$theme$colNumberStyle == 'parenthetic') olibutVec <- sprintf('(%i)', outVec)
+      else if (in_tabler$theme$colNumberStyle == 'roman') outVec <- as.roman(outVec)
+      else outVec <- as.character(outVec)
+      cat(sprintf(" & & %s \\\\ \n", pca(outVec)))
+    }
+    else if (thisChar == 'C') {
+      # The coefficient output process will have two steps.  First, create a data frame with the properly
+      # fomatted values (as characters).  Second, output these values in the LaTeX format.  The first
+      # step will allow the underlying code to be the same for all output formats.
+      coefList <- tabulateCoef(in_tabler$coefs, in_tabler$theme)
+      for (i in 1:length(coefList)) {
+        #browser()
+        cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n & & %s \\\\ \n",
+                    coefList[[i]][1],
+                    pca(coefList[[i]][2:(numCols+1)]),
+                    pca(coefList[[i]][(numCols + 2):(2*numCols + 1)],
+                        pre = "(",
+                        post = ")")))
+      }
+    }
+    else if (thisChar == 'G') {
+      # The Goodness of fit process will follow the same two step process as the coefficient output:  Get
+      # properly formatted output and then output to the screen.
+      gofMat <- tabulateGOF(in_tabler$gofs, in_tabler$theme)
+      for (i in 1:dim(gofMat)[1]) {
+        cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n", rownames(gofMat)[i], pca(gofMat[i, ])))
+      }
+    }
+    else warning(sprintf('Invalid element in theme order string:  %s', thisChar))
+  }
+
+  # Close out the LaTeX table
+  cat("\\end{tabular} \n")
+  if (!is.na(in_tabler$latex_label)) cat(sprintf("\\label{%s} \n", in_tabler$latex_label))
+  cat("\\end{table} \n")
+}
+
+#' Print as an HTML Table
+#'
+#' Prints a tablerObject as a properly formatted HTML table.
+#'
+#' @param in_table tabler_object for printing
+#' @return NULL
+#' @examples
+#' print_html(in_table)
+print_html <- function(in_table) {
+
+  if (!class(in_table) == "tablerObject") stop("Must supply valid tablerObject to print")
+
+  # Make sure anything in summarize is also in suppress (summarized variables will be handled
+  # at the end of the program)
+  #if (!is.na(summarize)) suppress <- unique(c(suppress, summarize))
+
+  # Output can be sent to the screen, a file, or both
+  #if (!is.na(outfile)) {
+  #  sink(outfile, split = TRUE)
+  #  on.exit(sink())
+  #}
+
+  # Number of columns of data in the table
+  num_cols <- length(in_table$depVars)
+
+  cat("<table style=\"width:100%\">\n")
+  if (!is.na(in_table$title)) cat(sprintf("<caption>%s</caption>\n", in_table$title))
+
+
+  # Now cycle through the oder in tabler theme order
+  for (i in seq(nchar(in_tabler$theme$order))) {
+    thisChar <- substr(in_tabler$theme$order, i, i)
+    if (thisChar == '=') cat("\\hline\\hline\n")
+    else if (thisChar == '-') cat("\\hline\n")
+    else if (thisChar == 'D') cat(sprintf("\\multicolumn{2}{r}{Dep. Variable:} & %s \\\\ \n", pca(in_tabler$depVar)))
+    else if (thisChar == 'M') cat(sprintf("\\multicolumn{2}{r}{Method:} & %s \\\\ \n" , pca(in_tabler$estTypes)))
+    else if (thisChar == 'N') {
+      outVec <- c(1:numCols)
+      if (in_tabler$theme$colNumberStyle == 'parenthetic') olibutVec <- sprintf('(%i)', outVec)
+      else if (in_tabler$theme$colNumberStyle == 'roman') outVec <- as.roman(outVec)
+      else outVec <- as.character(outVec)
+      cat(sprintf(" & & %s \\\\ \n", pca(outVec)))
+    }
+    else if (thisChar == 'C') {
+      # The coefficient output process will have two steps.  First, create a data frame with the properly
+      # fomatted values (as characters).  Second, output these values in the LaTeX format.  The first
+      # step will allow the underlying code to be the same for all output formats.
+      coefList <- tabulateCoef(in_tabler$coefs, in_tabler$theme)
+      for (i in 1:length(coefList)) {
+        #browser()
+        cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n & & %s \\\\ \n",
+                    coefList[[i]][1],
+                    pca(coefList[[i]][2:(numCols+1)]),
+                    pca(coefList[[i]][(numCols + 2):(2*numCols + 1)],
+                        pre = "(",
+                        post = ")")))
+      }
+    }
+    else if (thisChar == 'G') {
+      # The Goodness of fit process will follow the same two step process as the coefficient output:  Get
+      # properly formatted output and then output to the screen.
+      gofMat <- tabulateGOF(in_tabler$gofs, in_tabler$theme)
+      for (i in 1:dim(gofMat)[1]) {
+        cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n", rownames(gofMat)[i], pca(gofMat[i, ])))
+      }
+    }
+    else warning(sprintf('Invalid element in theme order string:  %s', thisChar))
+  }
+
+  # Close out the LaTeX table
+  cat("\\end{tabular} \n")
+  if (!is.na(in_tabler$latex_label)) cat(sprintf("\\label{%s} \n", in_tabler$latex_label))
+  cat("\\end{table} \n")
+}
+
+
+
+
+  tabulateCoef <- function(coefs, theme) {
   numCols <- max(coefs$estNum)
   numVars <- max(coefs$order)
 
