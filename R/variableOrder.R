@@ -38,9 +38,13 @@ order_variables <- function(var_names, xlevels, coefs) {
   # I want to make sure that I don't drop any observations, so this section
   # looks for variables that do not appear in nameOrder and adds them to the end
   # of the list if found
-  add_names <- coefs$var_name[unique(coefs$var_name) %notin% name_order]
+  add_names <- coefs$var_name[unique(coefs$var_name) %notin% name_order$out_vars]
   num_new <- length(add_names)
-  if (num_new > 0) rbind(name_order, cbind(add_names, max(coefs$est_num) + c(1:num_new)))
+  if (num_new > 0) {
+    new_order <- cbind(add_names, max(coefs$est_num) + c(1:num_new))
+    colnames(new_order) <- c('out_vars', 'order')
+    name_order <- rbind(name_order, new_order)
+  }
 
   with_order <- merge(coefs, name_order, by.x = 'var_name', by.y = 'out_vars')
   with_order[order(with_order$order, with_order$est_num), ]

@@ -20,9 +20,9 @@ tabler <- function(...) {
   tblr_obj$number <- NA
   tblr_obj$latex_label <- NA
 
-  tblr_obj$dep_vars <- unlist(lapply(in_cols, function(x) x$depVar))
-  tblr_obj$var_names <- unique(unlist(lapply(in_cols, function(x) x$varNames)))
-  tblr_obj$est_types <- unlist(lapply(in_cols, function(x) x$estType))
+  tblr_obj$dep_vars <- unlist(lapply(in_cols, function(x) x$dep_var))
+  tblr_obj$var_names <- unique(unlist(lapply(in_cols, function(x) x$var_names)))
+  tblr_obj$est_types <- unlist(lapply(in_cols, function(x) x$est_type))
 
   # I am going to stack the coefficient matrices
   # estNum will record which estimation (column) the coefficients belong in
@@ -34,7 +34,7 @@ tabler <- function(...) {
   tblr_obj$gofs <- data.frame(junk = rep(NA, length(in_cols)))
   gof_names <- unique(unlist(lapply(in_cols, function(x) names(x$gof))))
   for (this_name in gof_names) {
-    tblr_obj$gofs[thisName] <- unlist(lapply(in_cols, function(x) ifelse(is.element(this_name, names(x$gof)), x$gof[this_name],NA)))
+    tblr_obj$gofs[this_name] <- unlist(lapply(in_cols, function(x) ifelse(is.element(this_name, names(x$gof)), x$gof[this_name],NA)))
   }
   tblr_obj$gofs["junk"] <- NULL
 
@@ -54,7 +54,7 @@ tabler <- function(...) {
   tblr_obj$theme <- tabler_theme() # Set the theme values as defaults
 
   # Order the coefficient vector
-  tblr_obj$coefs <- variable_order(tblr_obj$var_names, tblr_obj$xlevels, tblr_obj$coefs)
+  tblr_obj$coefs <- order_variables(tblr_obj$var_names, tblr_obj$xlevels, tblr_obj$coefs)
 
   return(tblr_obj)
 }
@@ -65,12 +65,12 @@ tabler <- function(...) {
   else {
     if (class(new_object) != "tabler_col") new_object <- makeColumn(new_object)
 
-    tblr_obj$depVars <- c(tblr_obj$depVars, new_object$depVar)
-    tblr_obj$varNames <- unique(c(tblr_obj$varNames, new_object$varNames))
-    tblr_obj$estTypes <- c(tblr_obj$estTypes, new_object$estType)
+    tblr_obj$dep_vars <- c(tblr_obj$dep_vars, new_object$dep_var)
+    tblr_obj$var_names <- unique(c(tblr_obj$var_names, new_object$var_names))
+    tblr_obj$estTypes <- c(tblr_obj$est_types, new_object$est_type)
 
     # Stack the coefficient data.frames
-    new_object$coefs$estNum <- max(tblr_obj$coefs$estNum) + 1
+    new_object$coefs$est_num <- max(tblr_obj$coefs$est_num) + 1
     tblr_obj$coefs <- rbind(tblr_obj$coefs, new_object$coefs)
 
     # Combine the gof data.frames.  This is complicated because the statistics will differ across
@@ -85,22 +85,22 @@ tabler <- function(...) {
     # There must be a more efficient way to do this.
     temp <- list()
     xlevels <- unique(c(names(tblr_obj$xlevels), names(new_object$xlevels)))
-    for (level in xlevels) {
-      if (level %in% names(tblr_obj$xlevels)) {
-        if (level %in% names(new_object$xlevels)) {
-          temp[[level]] <- unique(c(tblr_obj$xlevels[[level]], new_object$xlevels[[level]]))
+    for (this_level in xlevels) {
+      if (this_level %in% names(tblr_obj$xlevels)) {
+        if (this_level %in% names(new_object$xlevels)) {
+          temp[[this_level]] <- unique(c(tblr_obj$xlevels[[this_level]], new_object$xlevels[[this_level]]))
         } else {
-          temp[[level]] <- tblr_obj$xlevels[[level]]
+          temp[[this_level]] <- tblr_obj$xlevels[[this_level]]
         }
       } else {
-        temp[[level]] <- new_object$xlevels[[level]]
+        temp[[this_level]] <- new_object$xlevels[[this_level]]
       }
     }
     tblr_obj$xlevels <- temp
   }
 
   # Order the coefficient vector
-  tblr_obj$coefs <- order_variables(tblr_obj$varNames, tblr_obj$xlevels, tblr_obj$coefs)
+  tblr_obj$coefs <- order_variables(tblr_obj$var_names, tblr_obj$xlevels, tblr_obj$coefs)
 
   tblr_obj
 }
