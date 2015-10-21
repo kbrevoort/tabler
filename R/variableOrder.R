@@ -6,8 +6,8 @@ order_variables <- function(var_names, xlevels, coefs) {
   # be added in this function
   if ('order' %in% names(coefs)) coefs$order <- NULL
 
-  var_names <- c(var_names, "(Intercept)")
-  temp_names <- unique(coefs$var_names)
+  var_names <- c("(Intercept)", var_names)
+  temp_names <- unique(coefs$var_name)
   out_vars <- NULL
 
   for (this_var in temp_names) {

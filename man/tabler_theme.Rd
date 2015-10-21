@@ -7,10 +7,13 @@
 tabler_theme(...)
 }
 \arguments{
-\item{showDepVar}{= TRUE
-showMethod = TRUE
-digits = c(3,2)
-sigLevels = c('***' = 0.01, '**' = 0.05, '*' = 0.1)}
+\item{show_dep_var}{= TRUE}
+
+\item{show_method}{= TRUE}
+
+\item{digits}{= c(3,2)}
+
+\item{sig_levels}{= c('***' = 0.01, '**' = 0.05, '*' = 0.1)}
 }
 \value{
 tablerTheme object

@@ -8,18 +8,18 @@
 #'
 #' @description Use this function to modify theme settings
 #' @usage tabler_theme(...)
-#' @param showDepVar = TRUE
-#' showMethod = TRUE
-#' digits = c(3,2)
-#' sigLevels = c('***' = 0.01, '**' = 0.05, '*' = 0.1)
+#' @param show_dep_var = TRUE
+#' @param show_method = TRUE
+#' @param digits = c(3,2)
+#' @param sig_levels = c('***' = 0.01, '**' = 0.05, '*' = 0.1)
 #' @return tablerTheme object
 #' @export
 tabler_theme <- function(show_dep_var = TRUE,
                          show_method = TRUE,
                          digits = c(3,2),
-                         sigLevels = c('***'=0.01, '**' = 0.05, '*' = 0.1),
+                         sig_levels = c('***'=0.01, '**' = 0.05, '*' = 0.1),
                          style = 'markdown',
-                         colNumberStyle = "parenthetic",  # Can also be 'roman'
+                         col_number_style = "parenthetic",  # Can also be 'roman'
                          order = "=NMD-C-G=") {
 
   # Validate data
@@ -30,13 +30,13 @@ tabler_theme <- function(show_dep_var = TRUE,
   elements$show_dep_var <- show_dep_var
   elements$show_method <- show_method
   elements$style <- style
-  elements$colNumberStyle <- colNumberStyle
+  elements$col_number_style <- col_number_style
 
   elements$order <- toupper(order)
 
   elements$digits <- digits
   if (length(digits) == 1) elements$digits <- c(digits, digits)
 
-  elements$sigLevels <- sort(sigLevels)
+  elements$sig_levels <- sort(sig_levels)
   elements
 }
