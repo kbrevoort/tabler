@@ -20,7 +20,8 @@ tabler_theme <- function(show_dep_var = TRUE,
                          sig_levels = c('***'=0.01, '**' = 0.05, '*' = 0.1),
                          style = 'markdown',
                          col_number_style = "parenthetic",  # Can also be 'roman'
-                         order = "=NMD-C-G=") {
+                         order = "=NMD-C-G=",
+                         suppress = NULL) {
 
   # Validate data
   if (length(digits) != 2) stop('Invalid digits parameter set in tabler_theme')
@@ -31,6 +32,7 @@ tabler_theme <- function(show_dep_var = TRUE,
   elements$show_method <- show_method
   elements$style <- style
   elements$col_number_style <- col_number_style
+  elements$suppression_list <- suppress
 
   elements$order <- toupper(order)
 

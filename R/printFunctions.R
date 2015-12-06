@@ -10,6 +10,15 @@ print.tabler_object <- function(in_tabler) {
   else print_html(in_tabler)
 }
 
+#' Print a Summary Table.
+#'
+#' Prints a sum_tabler object.
+print.sum_tabler <- function(in_tabler) {
+  if (in_tabler$theme$style == 'markdown') print_latex_sum(in_tabler)
+  else if (in_tabler$theme$style == 'latex') print_latex_sum(in_tabler)
+  else print_latex_sum(in_tabler)
+}
+
 #' Print as a LaTeX Table.
 #'
 #' Prints a tablerObject as a properly formatted latex table.

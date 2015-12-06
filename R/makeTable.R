@@ -1,14 +1,15 @@
 #' Make a tabler object
 #'
-#' This function produces the underlying tabler object
+#' This function produces the underlying tabler object.
 #' @export
 tabler <- function(...) {
   in_cols <- list(...)
 
-  # Check to make sure that every element of in_cols is a colRec
+  # Check to make sure that every element of in_cols is a colRec.
+  # If it's not, then convert it.
   for (i in seq_along(in_cols)) {
     if (class(in_cols[[i]]) != "tabler_column") {
-      in_col[[i]] <- makeColumn(in_cols[[i]])
+      in_cols[[i]] <- make_column(in_cols[[i]])
     }
   }
 
@@ -29,7 +30,7 @@ tabler <- function(...) {
   for (j in seq_along(in_cols)) in_cols[[j]]$coefs$est_num <- j
   tblr_obj$coefs <- do.call("rbind", lapply(in_cols, function(x) x$coefs))
 
-  # Combining gof data frames will be more difficult because the number of columns
+  # Combining gof data frames will be more difficult because the number of columns (stats)
   # may not be identical
   tblr_obj$gofs <- data.frame(junk = rep(NA, length(in_cols)))
   gof_names <- unique(unlist(lapply(in_cols, function(x) names(x$gof))))

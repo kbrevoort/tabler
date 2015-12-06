@@ -24,3 +24,4 @@ output_coef <- function(var_name, var_pos, coef_list, num_cols) {
                   post = ")")))
 }
 
+

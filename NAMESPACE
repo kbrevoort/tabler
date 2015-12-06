@@ -2,6 +2,5 @@
 
 S3method(print,tabler_object)
 export(make_column)
-export(summaryTable)
 export(tabler)
 export(tabler_theme)
