@@ -19,6 +19,63 @@ print.sum_tabler <- function(in_tabler) {
   else print_latex_sum(in_tabler)
 }
 
+print_latex_sum <- function(in_tabler) {
+  if (!class(in_tabler) == "sum_tabler") stop("Must supply valid tablerObject to print")
+
+  num_cols <- dim(in_tabler$values)[2]
+
+  cat("\\begin{table}[ht]\n")
+  if (!is.na(in_tabler$title)) cat(sprintf("\\caption{%s}\n", in_tabler$title))
+  cat("\\centering\n")
+  cat(sprintf("\\begin{tabular}{l%s}\n", paste0(rep("c", num_cols), collapse = "")))
+
+  # Now cycle through the order in tabler theme sum_order
+  for (i in seq(nchar(in_tabler$theme$sum_order))) {
+    this_char <- substr(in_tabler$theme$sum_order, i, i)
+    if (this_char == '=') cat("\\hline\\hline\n")
+    else if (this_char == '-') cat("\\hline\n")
+    else if (this_char == 'S') cat(sprintf(" & %s \\\\ \n", pca(colnames(in_tabler$values))))
+    else if (this_char == 'N') {
+      out_vec <- c(1:num_cols)
+      if (in_tabler$theme$col_number_style == 'parenthetic') out_vec <- sprintf('(%i)', out_vec)
+      else if (in_tabler$theme$col_number_style == 'roman') out_vec <- as.roman(out_vec)
+      else out_vec <- as.character(out_vec)
+      cat(sprintf(" & %s \\\\ \n", pca(out_vec)))
+    }
+    else if (this_char == 'V') {
+      for (var_name in in_tabler$var_names) {
+        if (var_name %in% names(in_tabler$xlevels)) {  # Variable is a factor
+          cat(sprintf("%s & %s \\\\ \n",
+                      var_name,
+                      pca(rep(" ", num_cols))))
+          for (fact_name in in_tabler$xlevels[[var_name]]) {
+            this_name <- paste0(var_name, fact_name)
+            cat(sprintf("\\hline*[3em] %s & %s \\\\ \n",
+                        fact_name,
+                        pca(prettyNum(in_tabler$values[this_name, ],
+                                      digits = 3,
+                                      big.mark = ','))))
+          }
+        } else {  # Variable is not a factor
+          if (var_name %in% rownames(in_tabler$values)) {
+            cat(sprintf("%s & %s \\\\ \n",
+                        var_name,
+                        pca(prettyNum(in_tabler$values[var_name, ],
+                                      digits = 3,
+                                      big.mark = ','))))
+          }
+        }
+      }
+    } else warning(sprintf('Invalid element in theme sum_order string:  %s', this_char))
+  }
+
+  # Close out the LaTeX table
+  cat("\\end{tabular} \n")
+  if (!is.na(in_tabler$latex_label)) cat(sprintf("\\label{%s} \n", in_tabler$latex_label))
+  cat("\\end{table} \n")
+}
+
+
 #' Print as a LaTeX Table.
 #'
 #' Prints a tablerObject as a properly formatted latex table.

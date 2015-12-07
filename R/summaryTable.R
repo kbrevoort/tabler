@@ -36,6 +36,11 @@ sum_tabler <- function(in_data, func_list = list('mean', 'sd', 'min', 'max'), dr
   }
   sum_table$values <- do.call(rbind, by_var)
 
+  sum_table$title <- NA
+  sum_table$notes <- NA
+  sum_table$number <- NA
+  sum_table$latex_label <- NA
+
   sum_table$theme <- tabler_theme()
 
   sum_table

@@ -21,7 +21,9 @@ tabler_theme <- function(show_dep_var = TRUE,
                          style = 'markdown',
                          col_number_style = "parenthetic",  # Can also be 'roman'
                          order = "=NMD-C-G=",
-                         suppress = NULL) {
+                         sum_order = "=NS-V=",
+                         suppress = NULL,
+                         use_booktabs = FALSE) {
 
   # Validate data
   if (length(digits) != 2) stop('Invalid digits parameter set in tabler_theme')
@@ -35,6 +37,7 @@ tabler_theme <- function(show_dep_var = TRUE,
   elements$suppression_list <- suppress
 
   elements$order <- toupper(order)
+  elements$sum_order <- toupper(sum_order)
 
   elements$digits <- digits
   if (length(digits) == 1) elements$digits <- c(digits, digits)
