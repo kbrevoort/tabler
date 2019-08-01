@@ -15,10 +15,11 @@ NULL
 
 #' Make Column object from single lm result.
 #'
-#' @param inResult An object containing the results of a statistical estimation
-#' @return Results a colRec object
+#' @param in_result An object containing the results of a statistical estimation
+#' @return Results a tabler_column object
 #' @examples
-#' make_column(inResult)
+#' make_column(in_result)
+#' @importFrom broom tidy glance
 #' @export
 make_column <- function(in_result) {
   UseMethod("make_column")
@@ -27,8 +28,6 @@ make_column <- function(in_result) {
 
 make_column.lm <- function(in_result) {
 
-  in_summary <- summary(in_result)
-
   col_obj <- list()
   attr(col_obj, "class") <- "tabler_column"
   col_obj$dep_var <- as.character(attributes(in_result$terms)$variables[[2]])
@@ -36,20 +35,16 @@ make_column.lm <- function(in_result) {
   col_obj$est_type <- class(in_result)[1]
   col_obj$xlevels <- in_result$xlevels
 
-  col_obj$coefs <- data.frame(in_summary$coefficient)
-  names(col_obj$coefs) <- c('est','std','tval','pval')
-  col_obj$coefs$var_name <- rownames(col_obj$coefs)
-  rownames(col_obj$coefs) <- NULL
+  col_obj$coefs <- broom::tidy(in_result)
 
-  if ( "(Intercept)" %in% rownames(col_obj$coefs) ) col_obj$var_names <- c("(Intercept)",col_obj$var_names)
+  if ( "(Intercept)" %in% col_obj$coefs$term)
+    col_obj$var_names <- c("(Intercept)", col_obj$var_names)
 
   # Add the R-squared to the goodness of fit statistic list
-  gof <- data.frame(r2=in_summary$r.squared, nobs=nobs(in_result))
-  names(gof) <- c("R-Squared", "Observations")
-
-  # This will add the man of the dependent variable
-  if (is.element("model", names(in_result))) gof[["Dep. Var. Mean"]] <- mean(in_result$model[,1])
-
+  gof <- broom::glance(in_result)
+  gof$N <- gof$df.residual + gof$df
+  if (is.element("model", names(in_result)))
+    gof$dep_var_mean <- mean(in_result$model[,1])
   col_obj$gof <- gof
 
   return(col_obj)
