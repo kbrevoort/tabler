@@ -1,43 +1,41 @@
 #' Make a tabler object
 #'
 #' This function produces the underlying tabler object.
+#' @importFrom purrr map
 #' @export
-tabler <- function(...) {
+tabler <- function(...,
+                   title = NA_character_,
+                   notes = NA_character_,
+                   number = NA_character_,
+                   latex_label = NA_character_) {
   in_cols <- list(...)
 
-  # Check to make sure that every element of in_cols is a colRec.
+  # Check to make sure that every element of in_cols is a tabler_column
   # If it's not, then convert it.
-  for (i in seq_along(in_cols)) {
-    if (class(in_cols[[i]]) != "tabler_column") {
-      in_cols[[i]] <- make_column(in_cols[[i]])
-    }
-  }
+  in_cols <- purrr::map_if(in_cols, not_tabler_column, make_column)
 
   # Create the tabler object
   tblr_obj <- list()
   attr(tblr_obj, "class") <- "tabler_object"
-  tblr_obj$title <- NA
-  tblr_obj$notes <- NA
-  tblr_obj$number <- NA
-  tblr_obj$latex_label <- NA
+  tblr_obj$title <- title
+  tblr_obj$notes <- notes
+  tblr_obj$number <- number
+  tblr_obj$latex_label <- latex_label
 
-  tblr_obj$dep_vars <- unlist(lapply(in_cols, function(x) x$dep_var))
-  tblr_obj$var_names <- unique(unlist(lapply(in_cols, function(x) x$var_names)))
-  tblr_obj$est_types <- unlist(lapply(in_cols, function(x) x$est_type))
+  tblr_obj$dep_vars <- purrr::map_chr(in_cols, ~.x$dep_var)
+  tblr_obj$var_names <- purrr::map(in_cols, ~.x$var_names) %>%
+    unlist() %>%
+    unique()
+  tblr_obj$est_types <- purrr::map_chr(in_cols, ~.x$est_type)
 
   # I am going to stack the coefficient matrices
   # estNum will record which estimation (column) the coefficients belong in
-  for (j in seq_along(in_cols)) in_cols[[j]]$coefs$est_num <- j
-  tblr_obj$coefs <- do.call("rbind", lapply(in_cols, function(x) x$coefs))
+  tblr_obj$coefs <- purrr::map_dfr(in_cols, ~.x$coefs, .id = 'est_num') %>%
+    mutate(est_num = as.numeric(est_num))
 
   # Combining gof data frames will be more difficult because the number of columns (stats)
   # may not be identical
-  tblr_obj$gofs <- data.frame(junk = rep(NA, length(in_cols)))
-  gof_names <- unique(unlist(lapply(in_cols, function(x) names(x$gof))))
-  for (this_name in gof_names) {
-    tblr_obj$gofs[this_name] <- unlist(lapply(in_cols, function(x) ifelse(is.element(this_name, names(x$gof)), x$gof[this_name],NA)))
-  }
-  tblr_obj$gofs["junk"] <- NULL
+  tblr_obj$gofs <- purrr::map_dfr(in_cols, ~.x$gof)
 
   # xlevels will follow the same method as gof.  It will be tougher though because
   # I do not know in advance the size of the vector.  This doesn't need to be a
@@ -55,7 +53,9 @@ tabler <- function(...) {
   tblr_obj$theme <- tabler_theme() # Set the theme values as defaults
 
   # Order the coefficient vector
-  tblr_obj$coefs <- order_variables(tblr_obj$var_names, tblr_obj$xlevels, tblr_obj$coefs)
+  tblr_obj$coefs <- order_variables(tblr_obj$coefs,
+                                    tblr_obj$var_names,
+                                    tblr_obj$xlevels)
 
   return(tblr_obj)
 }
@@ -64,7 +64,8 @@ tabler <- function(...) {
 `+.tabler_object` <- function(tblr_obj, new_object) {
   if (class(new_object) == "tabler_theme") tblr_obj$theme <- new_object
   else {
-    if (class(new_object) != "tabler_col") new_object <- makeColumn(new_object)
+    if (class(new_object) != "tabler_col")
+      new_object <- make_column(new_object)
 
     tblr_obj$dep_vars <- c(tblr_obj$dep_vars, new_object$dep_var)
     tblr_obj$var_names <- unique(c(tblr_obj$var_names, new_object$var_names))
@@ -72,15 +73,11 @@ tabler <- function(...) {
 
     # Stack the coefficient data.frames
     new_object$coefs$est_num <- max(tblr_obj$coefs$est_num) + 1
-    tblr_obj$coefs <- rbind(tblr_obj$coefs, new_object$coefs)
+    tblr_obj$coefs <- dplyr::bind_rows(tblr_obj$coefs, new_object$coefs)
 
     # Combine the gof data.frames.  This is complicated because the statistics will differ across
     # the columns.
-    new_names <- names(new_object$gof)[names(new_object$gof) %notin% names(tblr_obj$gofs)]
-    tblr_obj$gofs[, new_names] <- NA
-    empty_names <- names(tblr_obj$gofs)[names(tblr_obj$gofs) %notin% names(new_object$gof)]
-    new_object$gof[, empty_names] <- NA
-    tblr_obj$gofs <- rbind(tblr_obj$gofs, new_object$gof[, names(tblr_obj$gofs)])
+    tblr_obj$gofs <- dplyr::bind_rows(tblr_obj$gofs, new_object$gof)
 
     # Consolidate xlevels
     # There must be a more efficient way to do this.
@@ -101,8 +98,34 @@ tabler <- function(...) {
   }
 
   # Order the coefficient vector
-  tblr_obj$coefs <- order_variables(tblr_obj$var_names, tblr_obj$xlevels, tblr_obj$coefs)
+  tblr_obj$coefs <- order_variables(tblr_obj$coefs, tblr_obj$var_names, tblr_obj$xlevels)
 
   tblr_obj
 }
 
+not_tabler_column <- function(x) {
+  !is_tabler_column(x)
+}
+
+is_tabler_column <- function(x) {
+  any(class(x) == 'tabler_column')
+}
+
+combine_xlevels <- function(...) {
+  in_levels <- list(...)
+
+  xlevels <- purrr::map(in_levels, ~names(.x$xlevels)) %>%
+    unlist() %>%
+    unique()
+
+  ret_val <- list()
+  for (this_level in xlevels) {
+    values <- purrr::map(in_levels, ~.x$xlevels[[this_level]]) %>%
+      unlist() %>%
+      unique()
+
+    ret_val[[this_level]] <- values[[!is.na(values)]]
+  }
+
+  ret_val
+}
