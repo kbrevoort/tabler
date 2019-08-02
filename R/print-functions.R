@@ -5,9 +5,11 @@
 #' print(in_table)
 #' @export
 print.tabler_object <- function(in_tabler) {
-  if (in_tabler$theme$style == 'markdown') print_latex(in_tabler)
-  else if (in_tabler$theme$style == 'latex') print_latex(in_tabler)
-  else print_html(in_tabler)
+  if (in_tabler$theme$style == 'markdown') {
+    print_latex(in_tabler)
+  } else if (in_tabler$theme$style == 'latex') {
+    print_latex(in_tabler)
+  } else print_html(in_tabler)
 }
 
 #' Print a Summary Table.
@@ -212,6 +214,8 @@ print_latex <- function(in_tabler) {
                        sprintf("\\label{%s} \n",
                                in_tabler$latex_label))
   out_text <- paste0(out_text, "\\end{table} \n")
+
+  print(out_text)
 }
 
 #' Print as a Markdown Table.

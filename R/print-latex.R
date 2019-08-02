@@ -1,12 +1,12 @@
 
-
-print_latex <- function(x, ...) {
-  if (is.null(attr(x, "class"))) {
-    stop("Must supply an object to print_latex")
-  } else {
-    UseMethod("print_latex")
-  }
-}
+# DEPRECATED
+# print_latex <- function(x, ...) {
+#   if (is.null(attr(x, "class"))) {
+#     stop("Must supply an object to print_latex")
+#   } else {
+#     UseMethod("print_latex")
+#   }
+# }
 
 print_latex.sumTableRec <- function(myTable,
                                     myOpts = tablerOpts(),
