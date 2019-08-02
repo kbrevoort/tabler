@@ -13,12 +13,14 @@ print.tabler_object <- function(in_tabler) {
 #' Print a Summary Table.
 #'
 #' Prints a sum_tabler object.
+#' @export
 print.sum_tabler <- function(in_tabler) {
   if (in_tabler$theme$style == 'markdown') print_latex_sum(in_tabler)
   else if (in_tabler$theme$style == 'latex') print_latex_sum(in_tabler)
   else print_latex_sum(in_tabler)
 }
 
+#' Prints the Summary Table in Latex
 print_latex_sum <- function(in_tabler) {
   if (!class(in_tabler) == "sum_tabler") stop("Must supply valid tablerObject to print")
 
@@ -102,26 +104,42 @@ print_latex <- function(in_tabler) {
   # Number of columns of data in the table
   num_cols <- length(in_tabler$dep_vars)
 
-  cat("\\begin{table}[ht]\n")
-  if (!is.na(in_tabler$title)) cat(sprintf("\\caption{%s}\n", in_tabler$title))
-  cat("\\centering\n")
-  cat(sprintf("\\begin{tabular}{ll%s}\n", paste0(rep("c", num_cols), collapse = "")))
+  out_text <- "\\begin{table}[ht]\n"
 
-  # Now cycle through the oder in tabler theme order
+  # Add title if available
+  if (!is.na(in_tabler$title))
+    out_text <- sprintf("%s\\caption{%s}\n", out_text, in_tabler$title)
+
+  out_text <- sprintf("%s\\centering\n\\begin{tabular}{ll%s}\n",
+                      out_text,
+                      paste0(rep("c", num_cols), collapse = ""))
+
+  # Now cycle through the order in tabler theme order
   for (i in seq(nchar(in_tabler$theme$order))) {
     this_char <- substr(in_tabler$theme$order, i, i)
-    if (this_char == '=') cat("\\hline\\hline\n")
-    else if (this_char == '-') cat("\\hline\n")
-    else if (this_char == 'D') cat(sprintf("\\multicolumn{2}{r}{Dep. Variable:} & %s \\\\ \n", pca(in_tabler$dep_vars)))
-    else if (this_char == 'M') cat(sprintf("\\multicolumn{2}{r}{Method:} & %s \\\\ \n" , pca(in_tabler$est_types)))
-    else if (this_char == 'N') {
+    if (this_char == '=') {
+      out_text <- paste0(out_text, "\\hline\\hline\n")
+    } else if (this_char == '-') {
+      out_text <- paste0(out_text, "\\hline\n")
+    } else if (this_char == 'D') {
+      out_text <- paste0(out_text,
+                         sprintf("\\multicolumn{2}{r}{Dep. Variable:} & %s \\\\ \n",
+                                 pca(in_tabler$dep_vars)))
+    } else if (this_char == 'M') {
+      out_text <- paste0(out_text,
+                         sprintf("\\multicolumn{2}{r}{Method:} & %s \\\\ \n" ,
+                                 pca(in_tabler$est_types)))
+    } else if (this_char == 'N') {
       out_vec <- c(1:num_cols)
-      if (in_tabler$theme$col_number_style == 'parenthetic') out_vec <- sprintf('(%i)', out_vec)
-      else if (in_tabler$theme$col_number_style == 'roman') out_vec <- as.roman(out_vec)
-      else out_vec <- as.character(out_vec)
-      cat(sprintf(" & & %s \\\\ \n", pca(out_vec)))
-    }
-    else if (this_char == 'C') {
+      if (in_tabler$theme$col_number_style == 'parenthetic') {
+        out_vec <- sprintf('(%i)', out_vec)
+      } else if (in_tabler$theme$col_number_style == 'roman') {
+        out_vec <- as.roman(out_vec)
+      } else out_vec <- as.character(out_vec)
+      out_text <- paste0(out_text,
+                         sprintf(" & & %s \\\\ \n",
+                                 pca(out_vec)))
+    } else if (this_char == 'C') {
       # The coefficient output process will have two steps.  First, create a data frame with the properly
       # fomatted values (as characters).  Second, output these values in the LaTeX format.  The first
       # step will allow the underlying code to be the same for all output formats.
@@ -134,10 +152,11 @@ print_latex <- function(in_tabler) {
         # an element of the same factor, otherwise set on_factor back to NA
         if (!is.na(on_factor)) {
           if (this_var %in% sprintf('%s%s', on_factor, in_tabler$xlevels[[on_factor]])) {
-            output_coef(gsub(on_factor, '', this_var),
-                        2,
-                        coef_list[[i]],
-                        num_cols)
+            out_text <- output_coef(gsub(on_factor, '', this_var),
+                                    2,
+                                    coef_list[[i]],
+                                    num_cols) %>%
+              paste0(out_text, .)
             next
           } else {
             on_factor <- NA
@@ -145,25 +164,29 @@ print_latex <- function(in_tabler) {
         }
 
         if (this_var %in% in_tabler$var_names) {  # Regular variable
-          output_coef(this_var, 1, coef_list[[i]], num_cols)
+          out_text <- output_coef(this_var, 1, coef_list[[i]], num_cols) %>%
+            paste0(out_text, .)
         } else {
           # Check if this variable is one of the factors
           for (this_factor in names(in_tabler$xlevels)) {
             if (this_var %in% sprintf('%s%s', this_factor, in_tabler$xlevels[[this_factor]])) {
-              cat(sprintf('%s %s \\\\ \n',
-                          this_factor,
-                          paste0(rep(' & ', num_cols + 1),
-                                 collapse = '')))
-              output_coef(gsub(this_factor, '', this_var),  # Send only the factor level
-                          2,
-                          coef_list[[i]],
-                          num_cols)
+              out_text <- paste0(out_text,
+                                 sprintf('%s %s \\\\ \n',
+                                         this_factor,
+                                         paste0(rep(' & ', num_cols + 1),
+                                                collapse = '')))
+              out_text <- paste0(out_text,
+                                 output_coef(gsub(this_factor, '', this_var),  # Send only the factor level
+                                             2,
+                                             coef_list[[i]],
+                                             num_cols))
               on_factor <- this_factor
             }
           }
 
           if (is.na(on_factor)) {  # This means the variable is not a factor or in the var_names list
-            output_coef(this_var, 1, coef_list[[i]], num_cols)
+            out_text <- paste0(out_text,
+                               output_coef(this_var, 1, coef_list[[i]], num_cols))
           }
         }
       }
@@ -173,16 +196,22 @@ print_latex <- function(in_tabler) {
       # properly formatted output and then output to the screen.
       gof_Mat <- tabulate_GOF(in_tabler$gofs, in_tabler$theme)
       for (i in 1:dim(gof_Mat)[1]) {
-        cat(sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n", rownames(gof_Mat)[i], pca(gof_Mat[i, ])))
+        out_text <- paste0(out_text,
+                           sprintf("\\multicolumn{2}{l}{%s} & %s \\\\ \n",
+                                   rownames(gof_Mat)[i],
+                                   pca(gof_Mat[i, ])))
       }
     }
     else warning(sprintf('Invalid element in theme order string:  %s', this_char))
   }
 
   # Close out the LaTeX table
-  cat("\\end{tabular} \n")
-  if (!is.na(in_tabler$latex_label)) cat(sprintf("\\label{%s} \n", in_tabler$latex_label))
-  cat("\\end{table} \n")
+  out_text <- paste0(out_text, "\\end{tabular} \n")
+  if (!is.na(in_tabler$latex_label))
+    out_text <- paste0(out_text,
+                       sprintf("\\label{%s} \n",
+                               in_tabler$latex_label))
+  out_text <- paste0(out_text, "\\end{table} \n")
 }
 
 #' Print as a Markdown Table.
@@ -348,14 +377,16 @@ tabulate_coef <- function(coefs, theme) {
 
   for (i in 1:num_vars) {
     if (i %in% coefs$order) {
-      this_row <- coefs[coefs$order == i, ]
+      this_row <- dplyr::filter(coefs, order == i)
       line1 <- rep("", num_cols)
       line2 <- rep("", num_cols)
 
-      line1[this_row$est_num] <- prettyNum(this_row$est, digits = theme$digits[1])
-      line2[this_row$est_num] <- prettyNum(this_row$std, digits = theme$digits[2])
+      line1[this_row$est_num] <- prettyNum(this_row$estimate,
+                                           digits = theme$digits[1])
+      line2[this_row$est_num] <- prettyNum(this_row$std.error,
+                                           digits = theme$digits[2])
 
-      out_vec[[i]] <- c(this_row[1,1], line1, line2)
+      out_vec[[i]] <- c(this_row$term[1], line1, line2)
     }
   }
   out_vec
@@ -365,7 +396,8 @@ tabulate_GOF <- function(gofs, theme) {
   outDF <- data.frame(t(gofs))
 
   # Using the square brackets preserves the output as a data.frame
-  outDF[] <- lapply(outDF, function(x) prettyNum(x, digits = theme$digits[1], big.mark = ','))
+  outDF[] <- lapply(outDF,
+                    function(x) prettyNum(x, digits = theme$digits[1], big.mark = ','))
   outDF
 }
 

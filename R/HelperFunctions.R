@@ -16,12 +16,12 @@ output_coef <- function(var_name, var_pos, coef_list, num_cols) {
   if (var_pos == 2) prefix <- " & %s & "
   out_line <- paste0(prefix, "%s \\\\ \n & & %s \\\\ \n")
 
-  cat(sprintf(out_line,
-              var_name,
-              pca(coef_list[2:(num_cols + 1)]),
-              pca(coef_list[(num_cols + 2):(2 * num_cols + 1)],
-                  pre = "(",
-                  post = ")")))
+  sprintf(out_line,
+          var_name,
+          pca(coef_list[2:(num_cols + 1)]),
+          pca(coef_list[(num_cols + 2):(2 * num_cols + 1)],
+              pre = "(",
+              post = ")"))
 }
 
 
