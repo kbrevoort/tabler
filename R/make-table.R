@@ -40,15 +40,15 @@ tabler <- function(...,
   # xlevels will follow the same method as gof.  It will be tougher though because
   # I do not know in advance the size of the vector.  This doesn't need to be a
   # data frame.  I'll make it a list.
-  temp <- list()
-  xlevels <- unique(unlist(lapply(in_cols, function(x) names(x$xlevels))))
-  for (this_level in xlevels) {
-    temp[[this_level]] <- unique(unlist(lapply(in_cols, function(x) ifelse(is.element(this_level, names(x$xlevels)), x$xlevels[this_level],NA))))
-    if (any(is.na(temp[[this_level]]))) {  # If there are NA's, get rid of them
-      temp[[this_level]] <- temp[[this_level]][-which(is.na(temp[[this_level]]))]
-    }
-  }
-  tblr_obj$xlevels <- temp
+  # temp <- list()
+  # xlevels <- unique(unlist(lapply(in_cols, function(x) names(x$xlevels))))
+  # for (this_level in xlevels) {
+  #   temp[[this_level]] <- unique(unlist(lapply(in_cols, function(x) ifelse(is.element(this_level, names(x$xlevels)), x$xlevels[this_level],NA))))
+  #   if (any(is.na(temp[[this_level]]))) {  # If there are NA's, get rid of them
+  #     temp[[this_level]] <- temp[[this_level]][-which(is.na(temp[[this_level]]))]
+  #   }
+  # }
+  tblr_obj$xlevels <- combine_xlevels()
 
   tblr_obj$theme <- tabler_theme() # Set the theme values as defaults
 
@@ -60,7 +60,14 @@ tabler <- function(...,
   return(tblr_obj)
 }
 
-
+#' Add New Results to Existing Table
+#'
+#' Allows user to add an additional column of results to a pre-existing
+#' tabler_object
+#' @param tblr_obj A tabler_object
+#' @param new_object The result object to be added.
+#' @return A new tabler_object
+#' @export
 `+.tabler_object` <- function(tblr_obj, new_object) {
   if (class(new_object) == "tabler_theme") tblr_obj$theme <- new_object
   else {
@@ -81,20 +88,7 @@ tabler <- function(...,
 
     # Consolidate xlevels
     # There must be a more efficient way to do this.
-    temp <- list()
-    xlevels <- unique(c(names(tblr_obj$xlevels), names(new_object$xlevels)))
-    for (this_level in xlevels) {
-      if (this_level %in% names(tblr_obj$xlevels)) {
-        if (this_level %in% names(new_object$xlevels)) {
-          temp[[this_level]] <- unique(c(tblr_obj$xlevels[[this_level]], new_object$xlevels[[this_level]]))
-        } else {
-          temp[[this_level]] <- tblr_obj$xlevels[[this_level]]
-        }
-      } else {
-        temp[[this_level]] <- new_object$xlevels[[this_level]]
-      }
-    }
-    tblr_obj$xlevels <- temp
+    tblr_obj$xlevels <- combine_xlevels(tblr_object, new_object)
   }
 
   # Order the coefficient vector
@@ -111,6 +105,16 @@ is_tabler_column <- function(x) {
   any(class(x) == 'tabler_column')
 }
 
+#' Combine xlevels
+#'
+#' This function takes a series of tabler_column objects and combines the xlevels
+#' into a single list.  This provides a list of factor variables and all the
+#' levels observed in the columns.
+#' @param ... One or more tabler_column objects
+#' @return A named list of character vectors where each name is a factor variable
+#' included in the supplied tabler_objects and the character vector gives all of
+#' the levels associated with that factor.
+#' @importFrom purrr map
 combine_xlevels <- function(...) {
   in_levels <- list(...)
 
