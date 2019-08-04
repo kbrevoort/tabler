@@ -86,3 +86,16 @@ output_coef_table <- function(tblr_obj) {
     select(-order)
 }
 
+output_gofs_table <- function(tblr_obj) {
+  ret_val <- tblr_obj$gofs %>%
+    tibble::rowid_to_column(var = 'column') %>%
+    tidyr::gather(key = 'key', value = 'value', -column) %>%
+    tidyr::spread(key = 'column', value = 'value') %>%
+    rename(term = key) %>%
+    mutate(base = '', suffix = '')
+
+  c('base', 'term', 'suffix') %>%
+    union(names(ret_val)) %>%
+    select(ret_val, .)
+}
+
