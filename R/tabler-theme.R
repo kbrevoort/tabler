@@ -16,6 +16,7 @@
 #' @export
 tabler_theme <- function(show_dep_var = TRUE,
                          show_method = TRUE,
+                         group_factors = TRUE,
                          digits = c(3,2),
                          sig_levels = c('***'=0.01, '**' = 0.05, '*' = 0.1),
                          style = 'markdown',
@@ -43,5 +44,6 @@ tabler_theme <- function(show_dep_var = TRUE,
   if (length(digits) == 1) elements$digits <- c(digits, digits)
 
   elements$sig_levels <- sort(sig_levels)
+  elements$group_factors <- group_factors
   elements
 }
