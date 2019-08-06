@@ -48,7 +48,7 @@ tabler <- function(...,
   #     temp[[this_level]] <- temp[[this_level]][-which(is.na(temp[[this_level]]))]
   #   }
   # }
-  tblr_obj$xlevels <- combine_xlevels()
+  tblr_obj$xlevels <- combine_xlevels(in_cols)
 
   tblr_obj$theme <- tabler_theme() # Set the theme values as defaults
 
@@ -115,20 +115,18 @@ is_tabler_column <- function(x) {
 #' included in the supplied tabler_objects and the character vector gives all of
 #' the levels associated with that factor.
 #' @importFrom purrr map
-combine_xlevels <- function(...) {
-  in_levels <- list(...)
-
-  xlevels <- purrr::map(in_levels, ~names(.x$xlevels)) %>%
+combine_xlevels <- function(cols) {
+  xlevels <- purrr::map(cols, ~names(.x$xlevels)) %>%
     unlist() %>%
     unique()
 
   ret_val <- list()
   for (this_level in xlevels) {
-    values <- purrr::map(in_levels, ~.x$xlevels[[this_level]]) %>%
+    values <- purrr::map(cols, ~.x$xlevels[[this_level]]) %>%
       unlist() %>%
       unique()
 
-    ret_val[[this_level]] <- values[[!is.na(values)]]
+    ret_val[[this_level]] <- values[!is.na(values)]
   }
 
   ret_val
