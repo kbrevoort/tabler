@@ -1,16 +1,16 @@
-#' Print Method for Tabler Object
-#'
-#' @param in_table Tabler Object
-#' @examples
-#' print(in_table)
-#' @export
-print.tabler_object <- function(in_tabler) {
-  if (in_tabler$theme$style == 'markdown') {
-    print_latex(in_tabler)
-  } else if (in_tabler$theme$style == 'latex') {
-    print_latex(in_tabler)
-  } else print_html(in_tabler)
-}
+#' #' Print Method for Tabler Object
+#' #'
+#' #' @param in_table Tabler Object
+#' #' @examples
+#' #' print(in_table)
+#' #' @export
+#' print.tabler_object <- function(in_tabler) {
+#'   if (in_tabler$theme$style == 'markdown') {
+#'     print_latex(in_tabler)
+#'   } else if (in_tabler$theme$style == 'latex') {
+#'     print_latex(in_tabler)
+#'   } else print_html(in_tabler)
+#' }
 
 #' Print a Summary Table.
 #'
@@ -370,7 +370,16 @@ print_html <- function(in_table) {
   cat("\\end{table} \n")
 }
 
+tabulate_coef_dt <- function(tblr_obj) {
+  num_cols <- length(tblr_obj$dep_vars)
+  num_vars <- length(tblr_obj$var_names) # Thiss count includes factors (but not each level)
 
+  # THe number of factor variables (2 factors with 4 levels each would thus yield
+  # 8 as num_factors)
+  num_factors <- purrr::map_int(tblr_obj$xlevels, length) %>%
+    sum()
+
+}
 
 
 tabulate_coef <- function(coefs, theme) {

@@ -1,3 +1,39 @@
+#' Print Method for Tabler Object
+#'
+#' @param in_table Tabler Object
+#' @examples
+#' print(in_table)
+#' @export
+print.tabler_object <- function(in_tabler) {
+
+  my_order <- in_tabler$theme$order %>%
+    strsplit('') %>%
+    unlist()
+
+  this_format <- getOption('knitr.table.format')
+  if (is.null(this_format))
+    this_format <- in_tabler$theme$style
+
+  purrr::map_df(my_order, get_tblr_component, in_tabler = in_tabler) %>%
+    knitr::kable(caption = in_tabler$title, format = this_format)
+}
+
+get_tblr_component <- function(x, in_tabler) {
+  if (x == 'C') {
+    ret_val <- output_coef_table(in_tabler)
+  } else if (x == 'G') {
+    ret_val <- output_gofs_table(in_tabler)
+  } else if (x == 'N') {
+    ret_val <- output_colnum_table(in_tabler)
+  } else if (x == 'D') {
+    ret_val <- output_depvar_table(in_tabler)
+  } else if (x == 'M') {
+    ret_val <- output_method_table(in_tabler)
+  } else ret_val <- NULL
+
+  ret_val
+}
+
 #' Convert Coef Tibble to Output
 #'
 #' Takes a coefficient data.frame from a tabler_object and modifies
@@ -22,6 +58,7 @@ coef_to_dt <- function(coef_dt, sig_levels) {
     select(est_num, term, order, beta, sd) %>%
     gather(key, value, beta, sd) %>%
     arrange(order, est_num, key) %>%
+    mutate(est_num = sprintf('c_%i', as.integer(est_num))) %>%
     spread(est_num, value, fill = '') %>%
     arrange(order, key)
 }
@@ -83,19 +120,79 @@ output_coef_table <- function(tblr_obj) {
 
   right_join(var_names, coefs, by = 'term') %>%
     mutate(term = ifelse(base == term, '', term)) %>%
-    select(-order)
+    mutate(tblr_type = 'C') %>%
+    select(-order) %>%
+    list_first('base', 'term', 'suffix', 'tblr_type')
 }
 
 output_gofs_table <- function(tblr_obj) {
   ret_val <- tblr_obj$gofs %>%
     tibble::rowid_to_column(var = 'column') %>%
+    mutate(column = sprintf('c_%i', column)) %>%
     tidyr::gather(key = 'key', value = 'value', -column) %>%
+    mutate(value = as.character(value)) %>%
     tidyr::spread(key = 'column', value = 'value') %>%
     rename(term = key) %>%
-    mutate(base = '', suffix = '')
+    mutate(base = '', suffix = '') %>%
+    mutate(tblr_type = 'G')
 
-  c('base', 'term', 'suffix') %>%
-    union(names(ret_val)) %>%
-    select(ret_val, .)
+  list_first(ret_val, 'base', 'term', 'suffix', 'tblr_type')
+}
+
+output_depvar_table <- function(tblr_obj) {
+  start_df(tblr_obj$dep_vars) %>%
+    mutate(base = 'Dep. Variable:',
+           term = '',
+           suffix = '',
+           tblr_type = 'D') %>%
+    list_first('base', 'term', 'suffix', 'tblr_type')
+}
+
+output_method_table <- function(tblr_obj) {
+  start_df(tblr_obj$est_types) %>%
+    mutate(base = 'Method:',
+           term = '',
+           suffix = '',
+           tblr_type = 'M') %>%
+    list_first('base', 'term', 'suffix', 'tblr_type')
+}
+
+output_colnum_table <- function(tblr_obj) {
+  num_vec <- c(1:length(tblr_obj$dep_vars))
+
+  if (tblr_obj$theme$col_number_style == 'parenthetic') {
+    str_vec <- sprintf('(%s)', num_vec)
+  } else if (tblr_obj$theme$col_number_style == 'roman') {
+    str_vec <- as.roman(num_vec)
+  } else {
+    str_vec <- as.character(num_vec)
+  }
+
+  ret_val <- purrr::map_dfc(num_vec, ~ str_vec[[.x]])
+  names(ret_val) <- sprintf('c_%i', num_vec)
+
+  mutate(ret_val, base = '', term = '', suffix = '', tblr_type = 'N') %>%
+    list_first('base', 'term', 'suffix', 'tblr_type')
+}
+
+start_df <- function(x) {
+  ret_val <- purrr::map_dfc(c(1:length(x)), ~ x[[.x]])
+  names(ret_val) <- sprintf('c_%i', c(1:length(x)))
+  ret_val
+}
+
+#' List First
+#'
+#' Reorders a data.frame with the specified variables appearing first in order.
+#' The order of unspecified varaibles is maintained after all of the specified
+#' variables have been listed.
+#' @param dt A data.frame
+#' @param ... A series of character variables giving the names of the variables
+#' to be listed first.
+list_first <- function(dt, ...) {
+  list(...) %>%
+    unlist() %>%
+    union(names(dt)) %>%
+    select(dt, .)
 }
 
