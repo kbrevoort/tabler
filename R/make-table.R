@@ -7,7 +7,10 @@ tabler <- function(...,
                    title = NA_character_,
                    notes = NA_character_,
                    number = NA_character_,
-                   latex_label = NA_character_) {
+                   latex_label = NA_character_,
+                   alias = NA_character_,
+                   suppress = NA_character_,
+                   omit = NA_character_) {
   in_cols <- list(...)
 
   # Check to make sure that every element of in_cols is a tabler_column
@@ -21,6 +24,7 @@ tabler <- function(...,
   tblr_obj$notes <- notes
   tblr_obj$number <- number
   tblr_obj$latex_label <- latex_label
+  tblr_obj$osa <- create_osa(alias, suppress, omit)
 
   tblr_obj$dep_vars <- purrr::map_chr(in_cols, ~.x$dep_var)
   tblr_obj$var_names <- purrr::map(in_cols, ~.x$var_names) %>%
@@ -58,6 +62,44 @@ tabler <- function(...,
                                     tblr_obj$xlevels)
 
   return(tblr_obj)
+}
+
+#' Create Omit-Suppress-Alias (OSA) Object
+#'
+#' Create an OSA object.
+create_osa <- function(omit = NULL, suppress = NULL, alias = NULL) {
+  osa_obj <- list()
+  class(osa_obj) <- 'tabler_osa'
+  osa_obj$omit <- NA_character_
+  osa_obj$suppress <- NA_character_
+  osa_obj$alias <- NA_character_
+
+  set_osa(osa_obj, omit, suppress, alias)
+}
+
+#' Set Omit-Suppress-Alias (OSA)
+#'
+#' Replaces an existing OSA specification with the terms supplied to this function.
+#' If any one of the elments is not included, the any existing values of that term
+#' will be maintained.  To erase the existing elements of a term, set its value to NA.
+#' @param to A tabler_object
+#' @param omit Character vector of variable names to be omitted
+#' @param suppress Character vector of variable names to be suppressed. Only factor
+#' variables can be suppressed.
+#' @param alias Named character vector of variables to rename.  The name portion of the
+#' vector should be the existing variable name and the value should be its new name.
+#' @return An updated tabler_object
+#' @export
+set_osa <- function(osa, omit = NULL, suppress = NULL, alias = NULL) {
+
+  if (!class(osa) == 'tabler_osa')
+    stop('Must supply a valid OSA object to set_osa.')
+
+  if (!is.null(omit)) osa$omit <- omit
+  if (!is.null(suppress)) osa$suppress <- suppress
+  if (!is.null(alias)) osa$alias <- alias
+
+  osa
 }
 
 #' Add New Results to Existing Table

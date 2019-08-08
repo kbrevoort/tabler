@@ -23,7 +23,6 @@ tabler_theme <- function(show_dep_var = TRUE,
                          col_number_style = "parenthetic",  # Can also be 'roman'
                          order = "=NMD-C-G=",
                          sum_order = "=NS-V=",
-                         suppress = NULL,
                          use_booktabs = FALSE) {
 
   # Validate data
@@ -35,7 +34,6 @@ tabler_theme <- function(show_dep_var = TRUE,
   elements$show_method <- show_method
   elements$style <- style
   elements$col_number_style <- col_number_style
-  elements$suppression_list <- suppress
 
   elements$order <- toupper(order)
   elements$sum_order <- toupper(sum_order)
