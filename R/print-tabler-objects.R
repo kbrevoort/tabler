@@ -15,7 +15,67 @@ print.tabler_object <- function(in_tabler) {
     this_format <- in_tabler$theme$style
 
   purrr::map_df(my_order, get_tblr_component, in_tabler = in_tabler) %>%
+    process_osa(in_tabler$osa) %>%
     knitr::kable(caption = in_tabler$title, format = this_format)
+}
+
+process_osa <- function(tbl_dt, osa_obj) {
+  if (!is.na(osa_obj$omit)) {
+    tbl_dt <- filter(tbl_dt,
+                      tblr_type != 'C' |
+                        (base %notin% osa_obj$omit & term %notin% osa_obj$omit))
+  }
+
+  if (!is.na(osa_obj$suppress)) {
+    # Produce rows that will replace suppressed variables
+    replacement_dt <- purrr::map_df(osa_obj$suppress, suppress_compress, dt = tbl_dt)
+
+    # Remove suppressed rows
+    tbl_dt <- filter(tbl_dt, tblr_type != 'C' | base %notin% osa_obj$suppress) %>%
+      mutate(row_num = row_number())
+
+    add_place <- tbl_dt %>%
+      filter(tblr_type == 'C') %>%
+      pull(row_num) %>%
+      max()
+    tblr_dt <- bind_rows(filter(tbl_dt, row_num <= add_place),
+                         replacement_dt,
+                         filter(tbl_dt, row_num > add_place)) %>%
+      select(-row_num)
+  }
+
+  if (!is.na(osa_obj$alias)) {
+    for (i in seq_along(osa_obj$alias)) {
+      this_name <- names(osa_obj$alias)[i]
+      this_alias <- unname(osa_obj$alias)[i]
+
+      if (any(tbl_dt$base == this_name)) {
+        tbl_dt$base[tbl_dt$base == this_name] <- this_alias
+      }
+      if (any(tbl_dt$term == this_name)) {
+        tbl_dt$suffix[tbl_dt$term == this_name] <- this_alias
+      }
+    }
+  }
+
+  tbl_dt
+}
+
+#' Suppress Compress
+#'
+#' Takes rows from the coefficient table that are included in the suppression list
+#' and generates a single replacement row for each variable that reports whether
+#' that factor variable was included in the estimation reported in each column.
+#' @param suppress_var Character scalar giving the name of a factor variable to be suppressed
+#' @param dt The tibble prepared to be printed
+suppress_compress <- function(suppress_var, dt) {
+  filter(dt, tblr_type == 'C' & base == suppress_var) %>%
+    purrr::map_df(~ if (all(.x == '')) '' else 'Y') %>%
+    mutate(base = suppress_var,
+           term = suppress_var,
+           suffix = '',
+           tblr_type = 'C',
+           key = 'beta')
 }
 
 get_tblr_component <- function(x, in_tabler) {
