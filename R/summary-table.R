@@ -5,7 +5,10 @@
 #' @param drop_all_NA Boolean indicating whether observations with missing values should be dropped (default = FALSE)
 #' @return sum_tabler object
 #' @export
-sum_tabler <- function(in_data, func_list = list('mean', 'sd', 'min', 'max'), drop_all_NA = FALSE) {
+sum_tabler <- function(in_data,
+                       func_list = list(mean, sd, min, max),
+                       drop_all_NA = FALSE,
+                       ...) {
   # in_data has to be a data frame
   if (!is.data.frame(in_data)) stop('Must supply a data.frame to sum_tabler')
 
@@ -15,19 +18,13 @@ sum_tabler <- function(in_data, func_list = list('mean', 'sd', 'min', 'max'), dr
   sum_table$var_names <- names(in_data)
   sum_table$xlevels <- list()
 
-  for (i in seq_along(in_data)) {
-    if (is.factor(in_data[[i]])) {
-      sum_table$xlevels[[names(in_data)[i]]] <- levels(in_data[[i]])
-    }
-  }
+  sum_table$xlevels <- purrr::map_if(in_data, is.factor, ~ levels(.x))
 
   # If drop_all_NA == TRUE, we drop any observation that has at least one missing value
-  if(drop_all_NA) {
-    in_data <- na.omit(in_data)
-  }
+  if(drop_all_NA) in_data <- na.omit(in_data)
 
   # Loop over the variables in in_data, calling tblr_run on each one
-  by_var <- lapply(in_data, tblr_fun, func_list)
+  by_var <- purrr::map(in_data, tblr_fun, func_list, ...)
 
   # tblr_fun returns all row names with the name "in_vec".  This replaces that
   # with the actual names of each variable.
@@ -47,8 +44,8 @@ sum_tabler <- function(in_data, func_list = list('mean', 'sd', 'min', 'max'), dr
 }
 
 #' This function runs a series of functions, in func_list, on a single variable, in_vec.
-tblr_fun <- function(in_vec, func_list = NA) {
-  a <- lapply(func_list, tblr_run, in_vec)
+tblr_fun <- function(x, func_list = NA, ...) {
+  a <- lapply(func_list, tblr_run, x)
   ret_val <- do.call(cbind, a)
   colnames(ret_val) <- unlist(func_list)
   ret_val
