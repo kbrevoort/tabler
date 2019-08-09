@@ -34,6 +34,7 @@ make_column.lm <- function(in_result) {
   col_obj$var_names <- attributes(in_result$terms)$term.labels
   col_obj$est_type <- class(in_result)[1]
   col_obj$xlevels <- in_result$xlevels
+  col_obj$absorbed_vars <- NA_character_
 
   col_obj$coefs <- broom::tidy(in_result)
 
@@ -51,7 +52,7 @@ make_column.lm <- function(in_result) {
 }
 
 make_column.felm <- function(in_result) {
-  
+
   col_obj <- list()
   attr(col_obj, 'class') <- 'tabler_column'
   col_obj$dep_var <- in_result$lhs
@@ -60,16 +61,16 @@ make_column.felm <- function(in_result) {
   col_obj$est_type <- class(in_result)[1]
   col_obj$xlevels <- purrr::map(names(in_result$fe), ~ levels(in_result$fe[[.x]]))
   names(col_obj$xlevels) <- names(in_result$fe)
-  
+
   col_obj$absorbed_vars <- names(in_result$fe)
-    
+
   col_obj$coefs <- broom::tidy(in_result)
-  
+
   gof <- broom::glance(in_result)
   gof$N <- in_result$N
   gof$dep_var_mean <- mean(in_result$response)
   col_obj$gof <- gof
-  
+
   col_obj
 }
 

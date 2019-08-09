@@ -15,20 +15,45 @@ print.tabler_object <- function(in_tabler) {
     this_format <- in_tabler$theme$style
 
   purrr::map_df(my_order, get_tblr_component, in_tabler = in_tabler) %>%
-    process_osa(in_tabler$osa) %>%
+    process_osa(in_tabler$osa, in_tabler$absorbed_vars) %>%
     knitr::kable(caption = in_tabler$title, format = this_format)
 }
 
-process_osa <- function(tbl_dt, osa_obj) {
+process_osa <- function(tbl_dt, osa_obj, abs_var) {
   if (!is.na(osa_obj$omit)) {
     tbl_dt <- filter(tbl_dt,
                       tblr_type != 'C' |
                         (base %notin% osa_obj$omit & term %notin% osa_obj$omit))
   }
 
+  absorbed_dt <- build_absorb_dt(abs_var)
+  if (!is.null(absorbed_dt)) {
+    # Add absorbed data to coefficients
+    tbl_dt <- mutate(tbl_dt, row_num = row_number())
+    add_place <- tbl_dt %>%
+      filter(tblr_type == 'C') %>%
+      pull(row_num) %>%
+      max()
+    tbl_dt <- bind_rows(filter(tbl_dt, row_num <= add_place),
+                         absorbed_dt,
+                         filter(tbl_dt, row_num > add_place)) %>%
+      select(-row_num)
+
+    if (is.na(osa_obj$suppress)) {
+      osa_obj$suppress <- absorbed_dt$term
+    } else {
+      osa_obj$suppress <- union(osa_obj$suppress, absorbed_dt$term)
+    }
+  }
+
   if (!is.na(osa_obj$suppress)) {
     # Produce rows that will replace suppressed variables
     replacement_dt <- purrr::map_df(osa_obj$suppress, suppress_compress, dt = tbl_dt)
+
+    # IF there are absorbed variables add them here
+    absorbed_dt <- build_absorb_dt(abs_var)
+    if (!is.null(absorbed_dt))
+      replacement_dt <- dplyr::bind_rows(replacement_dt, absorbed_dt)
 
     # Remove suppressed rows
     tbl_dt <- filter(tbl_dt, tblr_type != 'C' | base %notin% osa_obj$suppress) %>%
@@ -107,7 +132,7 @@ get_tblr_component <- function(x, in_tabler) {
 #' @importFrom dplyr mutate select arrange
 #' @importFrom tidyr gather spread
 coef_to_dt <- function(coef_dt, sig_levels) {
-  mutate(coef_dt, beta = sprintf('%s%s',
+  ret_val <- mutate(coef_dt, beta = sprintf('%s%s',
                                  prettyNum(coef_dt$estimate, big.mark = ',', digits = 3L),
                                  cut(coef_dt$p.value,
                                      breaks = c(-1, sig_levels, 1),
@@ -121,6 +146,8 @@ coef_to_dt <- function(coef_dt, sig_levels) {
     mutate(est_num = sprintf('c_%i', as.integer(est_num))) %>%
     spread(est_num, value, fill = '') %>%
     arrange(order, key)
+
+
 }
 
 order_coefs <- function(var_names, xlevels) {
@@ -256,3 +283,27 @@ list_first <- function(dt, ...) {
     select(dt, .)
 }
 
+build_absorb_dt <- function(absorb_list) {
+  f <- function(i, al) {
+    if (is.null(al[[i]])) {
+      return(NULL)
+    } else {
+      tibble::tibble(term = al[[i]], value = sprintf('c_%i', i))
+    }
+  }
+
+  temp <- purrr::map_df(seq_along(absorb_list), f, al = absorb_list) %>%
+    mutate(beta = 'Y')
+
+  right_join(temp,
+             expand.grid(term = temp$term,
+                         value = sprintf('c_%i', seq_along(absorb_list)),
+                         stringsAsFactors = FALSE),
+             by = c('term', 'value')) %>%
+    mutate(beta = ifelse(is.na(beta), '', beta)) %>%
+    spread(value, beta, fill = '') %>%
+    mutate(base = '',
+           suffix = '',
+           tblr_type = 'C') %>%
+    list_first('base', 'term', 'suffix', 'tblr_type')
+}

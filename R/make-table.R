@@ -41,18 +41,8 @@ tabler <- function(...,
   # may not be identical
   tblr_obj$gofs <- purrr::map_dfr(in_cols, ~.x$gof)
 
-  # xlevels will follow the same method as gof.  It will be tougher though because
-  # I do not know in advance the size of the vector.  This doesn't need to be a
-  # data frame.  I'll make it a list.
-  # temp <- list()
-  # xlevels <- unique(unlist(lapply(in_cols, function(x) names(x$xlevels))))
-  # for (this_level in xlevels) {
-  #   temp[[this_level]] <- unique(unlist(lapply(in_cols, function(x) ifelse(is.element(this_level, names(x$xlevels)), x$xlevels[this_level],NA))))
-  #   if (any(is.na(temp[[this_level]]))) {  # If there are NA's, get rid of them
-  #     temp[[this_level]] <- temp[[this_level]][-which(is.na(temp[[this_level]]))]
-  #   }
-  # }
   tblr_obj$xlevels <- combine_xlevels(in_cols)
+  tblr_obj$absorbed_vars <- purrr::map(in_cols, ~ .x$absorbed_vars)
 
   tblr_obj$theme <- tabler_theme() # Set the theme values as defaults
 
@@ -131,6 +121,7 @@ set_osa <- function(osa, omit = NULL, suppress = NULL, alias = NULL) {
     # Consolidate xlevels
     # There must be a more efficient way to do this.
     tblr_obj$xlevels <- combine_xlevels(tblr_object, new_object)
+    tblr_obj$absorbed_vars <- c(tblr_obj$absorbed_vars, new_object$absorbed_vars)
   }
 
   # Order the coefficient vector
