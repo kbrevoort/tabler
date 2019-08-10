@@ -14,9 +14,34 @@ print.tabler_object <- function(in_tabler) {
   if (is.null(this_format))
     this_format <- in_tabler$theme$style
 
-  purrr::map_df(my_order, get_tblr_component, in_tabler = in_tabler) %>%
-    process_osa(in_tabler$osa, in_tabler$absorbed_vars) %>%
-    knitr::kable(caption = in_tabler$title, format = this_format)
+  out_dt <- purrr::map_df(my_order, get_tblr_component, in_tabler = in_tabler) %>%
+    process_osa(in_tabler$osa, in_tabler$absorbed_vars)
+
+  if (this_format == 'markdown') {
+    knitr::kable(caption = in_tabler$title,
+                 format = this_format) %>%
+      return()
+  } else {
+
+  header_dt <- filter(out_dt, tblr_type %notin% c('C', 'G')) %>%
+    arrange(-row_num) %>%
+    select(-term, -suffix, -tblr_type, -row_num, -key)
+
+  ret_val <- filter(out_dt, tblr_type %in% c('C', 'G')) %>%
+    select(-base, -suffix, -tblr_type, -key, -row_num) %>%
+    knitr::kable(caption = in_tabler$title,
+                 format = this_format,
+                 col.names = NULL)
+
+  for (i in seq_along(header_dt$base)) {
+    names_to_add <- slice(header_dt, i) %>%
+      unlist() %>%
+      unname()
+    vec_to_add <- rep(1L, times = length(names_to_add))
+    names(vec_to_add) <- names_to_add
+
+    ret_val <- add_header_above(ret_val, vec_to_add)
+  }
 }
 
 process_osa <- function(tbl_dt, osa_obj, abs_var) {
