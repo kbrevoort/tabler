@@ -22,7 +22,7 @@ NULL
 #' @importFrom broom tidy glance
 #' @export
 make_column <- function(in_result) {
-  UseMethod("make_column")
+  UseMethod("make_column", in_result)
 }
 
 
