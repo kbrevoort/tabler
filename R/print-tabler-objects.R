@@ -18,37 +18,65 @@ print.tabler_object <- function(in_tabler) {
     process_osa(in_tabler$osa, in_tabler$absorbed_vars)
 
   if (this_format == 'markdown') {
-    knitr::kable(caption = in_tabler$title,
+    knitr::kable(out_dt,
+                 caption = in_tabler$title,
                  format = this_format) %>%
       return()
   } else {
 
-  header_dt <- filter(out_dt, tblr_type %notin% c('C', 'G')) %>%
-    arrange(-row_num) %>%
-    select(-term, -suffix, -tblr_type, -row_num, -key)
+    header_dt <- filter(out_dt, tblr_type %notin% c('C', 'G')) %>%
+      arrange(-row_num) %>%
+      select(-term, -suffix, -tblr_type, -row_num, -key)
 
-  ret_val <- filter(out_dt, tblr_type %in% c('C', 'G')) %>%
-    select(-base, -suffix, -tblr_type, -key, -row_num) %>%
-    knitr::kable(caption = in_tabler$title,
-                 format = this_format,
-                 col.names = NULL)
+    body_dt <- filter(out_dt, tblr_type %in% c('C', 'G')) %>%
+      mutate(row_num = row_num - min(row_num) + 1)
 
-  for (i in seq_along(header_dt$base)) {
-    names_to_add <- slice(header_dt, i) %>%
-      unlist() %>%
-      unname()
-    vec_to_add <- rep(1L, times = length(names_to_add))
-    names(vec_to_add) <- names_to_add
+    if (in_tabler$theme$group_factors) {  # If factors are to be grouped
+      ret_val <- mutate(body_dt, term = ifelse(suffix == '', term, suffix)) %>%
+        select(-base, -suffix, -tblr_type, -row_num, -key) %>%
+        knitr::kable(caption = in_tabler$title,
+                     format = this_format,
+                     col.names = NULL)
 
-    ret_val <- add_header_above(ret_val, vec_to_add)
+      pack_detail <- get_pack_details(body_dt)
+      for (i in seq_along(pack_detail$base)) {
+        ret_val <- kableExtra::pack_rows(ret_val,
+                                         group_label = pack_detail$base[[i]],
+                                         start_row = pack_detail$start[[i]],
+                                         end_row = pack_detail$end[[i]])
+      }
+    } else { # Factors are not to be grouped}
+      ret_val <- select(ret_val, -base, -suffix, -tblr_type, -row_num, -key) %>%
+        knitr::kable(caption = in_tabler$title,
+                     format = this_format,
+                     col.names = NULL)
+    }
+
+    for (i in seq_along(header_dt$base)) {
+      names_to_add <- slice(header_dt, i) %>%
+        unlist() %>%
+        unname()
+      vec_to_add <- rep(1L, times = length(names_to_add))
+      names(vec_to_add) <- names_to_add
+
+      ret_val <- add_header_above(ret_val, vec_to_add)
+    }
   }
+}
+
+get_pack_details <- function(in_table) {
+  dplyr::filter(in_table, tblr_type == 'C' & suffix != '') %>%
+    group_by(base) %>%
+    summarize(start = min(row_num),
+              end = max(row_num)) %>%
+    arrange(start)
 }
 
 process_osa <- function(tbl_dt, osa_obj, abs_var) {
   if (!is.na(osa_obj$omit)) {
     tbl_dt <- filter(tbl_dt,
-                      tblr_type != 'C' |
-                        (base %notin% osa_obj$omit & term %notin% osa_obj$omit))
+                     tblr_type != 'C' |
+                       (base %notin% osa_obj$omit & term %notin% osa_obj$omit))
   }
 
   absorbed_dt <- build_absorb_dt(abs_var)
@@ -60,8 +88,8 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
       pull(row_num) %>%
       max()
     tbl_dt <- bind_rows(filter(tbl_dt, row_num <= add_place),
-                         absorbed_dt,
-                         filter(tbl_dt, row_num > add_place)) %>%
+                        absorbed_dt,
+                        filter(tbl_dt, row_num > add_place)) %>%
       select(-row_num)
 
     if (is.na(osa_obj$suppress)) {
