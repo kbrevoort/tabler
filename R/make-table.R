@@ -1,7 +1,8 @@
 #' Make a tabler object
 #'
 #' This function produces the underlying tabler object.
-#' @importFrom purrr map
+#' @importFrom purrr map map_chr map_dfr map_if
+#' @importFrom dplyr mutate
 #' @export
 tabler <- function(...,
                    title = NA_character_,
@@ -99,6 +100,7 @@ set_osa <- function(osa, omit = NULL, suppress = NULL, alias = NULL) {
 #' @param tblr_obj A tabler_object
 #' @param new_object The result object to be added.
 #' @return A new tabler_object
+#' @importFrom dplyr bind_rows
 #' @export
 `+.tabler_object` <- function(tblr_obj, new_object) {
   if (class(new_object) == "tabler_theme") tblr_obj$theme <- new_object

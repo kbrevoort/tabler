@@ -3,6 +3,10 @@
 #' @param in_table Tabler Object
 #' @examples
 #' print(in_table)
+#' @importFrom purrr map_df
+#' @importFrom knitr kable
+#' @importFrom dplyr filter arrange select mutate slice
+#' @importFrom kableExtra pack_rows
 #' @export
 print.tabler_object <- function(in_tabler) {
 
@@ -64,6 +68,7 @@ print.tabler_object <- function(in_tabler) {
   }
 }
 
+#' @importFrom dplyr filter group_by summarize arrange
 get_pack_details <- function(in_table) {
   dplyr::filter(in_table, tblr_type == 'C' & suffix != '') %>%
     group_by(base) %>%
@@ -72,6 +77,8 @@ get_pack_details <- function(in_table) {
     arrange(start)
 }
 
+#' @importFrom dplyr union filter mutate pull bind_rows select
+#' @importFrom purrr map_df
 process_osa <- function(tbl_dt, osa_obj, abs_var) {
   if (!is.na(osa_obj$omit)) {
     tbl_dt <- filter(tbl_dt,
@@ -146,6 +153,8 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
 #' that factor variable was included in the estimation reported in each column.
 #' @param suppress_var Character scalar giving the name of a factor variable to be suppressed
 #' @param dt The tibble prepared to be printed
+#' @importFrom dplyr filter mutate
+#' @importFrom purrr map_df
 suppress_compress <- function(suppress_var, dt) {
   filter(dt, tblr_type == 'C' & base == suppress_var) %>%
     purrr::map_df(~ if (all(.x == '')) '' else 'Y') %>%
@@ -203,10 +212,13 @@ coef_to_dt <- function(coef_dt, sig_levels) {
 
 }
 
+#' @importFrom purrr map_df
 order_coefs <- function(var_names, xlevels) {
   purrr::map_df(var_names, build_var_names, xlevels = xlevels)
 }
 
+#' @importFrom purrr map pmap
+#' @importFrom tibble tibble
 build_var_names <- function(var_name, xlevels) {
   if (grepl(':', var_name)) {
     interacted_vars <- str_split(var_name, ':') %>%
@@ -254,6 +266,7 @@ name_interaction <- function(...) {
   paste(just_vals, collapse = " \u2613 ")
 }
 
+#' @importFrom dplyr right_join mutate select
 output_coef_table <- function(tblr_obj) {
   coefs <- coef_to_dt(tblr_obj$coef, tblr_obj$theme$sig_level)
   var_names <- order_coefs(tblr_obj$var_names, tblr_obj$xlevels)
@@ -265,6 +278,9 @@ output_coef_table <- function(tblr_obj) {
     list_first('base', 'term', 'suffix', 'tblr_type')
 }
 
+#' @importFrom dplyr mutate rename
+#' @importFrom tibble rowid_to_column
+#' @importFrom tidyr gather spread
 output_gofs_table <- function(tblr_obj) {
   ret_val <- tblr_obj$gofs %>%
     tibble::rowid_to_column(var = 'column') %>%
@@ -297,6 +313,8 @@ output_method_table <- function(tblr_obj) {
     list_first('base', 'term', 'suffix', 'tblr_type')
 }
 
+#' @importFrom purrr map_dfc
+#' @importFrom dplyr mutate
 output_colnum_table <- function(tblr_obj) {
   num_vec <- c(1:length(tblr_obj$dep_vars))
 
@@ -315,6 +333,7 @@ output_colnum_table <- function(tblr_obj) {
     list_first('base', 'term', 'suffix', 'tblr_type')
 }
 
+#' @importFrom purrr map_dfc
 start_df <- function(x) {
   ret_val <- purrr::map_dfc(c(1:length(x)), ~ x[[.x]])
   names(ret_val) <- sprintf('c_%i', c(1:length(x)))
@@ -329,6 +348,7 @@ start_df <- function(x) {
 #' @param dt A data.frame
 #' @param ... A series of character variables giving the names of the variables
 #' to be listed first.
+#' @importFrom dplyr union select
 list_first <- function(dt, ...) {
   list(...) %>%
     unlist() %>%
@@ -336,6 +356,10 @@ list_first <- function(dt, ...) {
     select(dt, .)
 }
 
+#' @importFrom tibble tibble
+#' @importFrom purrr map_df
+#' @importFrom dplyr mutate right_join
+#' @importFrom tidyr spread
 build_absorb_dt <- function(absorb_list) {
   f <- function(i, al) {
     if (is.null(al[[i]])) {

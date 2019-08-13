@@ -6,5 +6,15 @@ Date: 2015-07-17
 Author: Kenneth Brevoort
 Maintainer: Kenneth Brevoort <ken@brevoort.com>
 Description: This package contains functions to produce tables of coefficient results in R in formats (LaTeX, HTML, and RMarkdown) that can be easily used in documents created by Knitr.
+Imports:
+  knitr,
+  kableExtra,
+  broom,
+  purrr,
+  dplyr,
+  tibble,
+  tidyr
+Encoding:  UTF-8
 License: What license is it under?
 LazyData: TRUE
+RoxygenNote: 6.1.0
