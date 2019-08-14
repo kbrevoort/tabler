@@ -1,18 +1,3 @@
-# This R script will contain functions that create column objects that record the
-# information which will be ouput into the table.  These functions will return
-# S3 objects.
-#
-# Each object will be a list with the following elements
-#
-# class:  "tabler_column"
-# dep_vars:  "character"
-# var_names:  "character" vector
-# est_types: "character"
-# xlevels: "character"
-# coefs:  "matrix"
-# gofs: "data.frame"
-NULL
-
 #' Make Column object from single lm result.
 #'
 #' @param in_result An object containing the results of a statistical estimation
@@ -22,10 +7,10 @@ NULL
 #' @importFrom broom tidy glance
 #' @export
 make_column <- function(in_result) {
-  UseMethod("make_column", in_result)
+  UseMethod("make_column")
 }
 
-
+#' @export
 make_column.lm <- function(in_result) {
 
   col_obj <- list()
@@ -51,6 +36,7 @@ make_column.lm <- function(in_result) {
   return(col_obj)
 }
 
+#' @export
 make_column.felm <- function(in_result) {
 
   col_obj <- list()
