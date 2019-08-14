@@ -6,7 +6,8 @@
 #' @importFrom purrr map_df
 #' @importFrom knitr kable
 #' @importFrom dplyr filter arrange select mutate slice
-#' @importFrom kableExtra pack_rows
+#' @importFrom kableExtra pack_rows add_header_above
+#' @importFrom magrittr "%>%"
 #' @export
 print.tabler_object <- function(in_tabler) {
 
@@ -22,10 +23,9 @@ print.tabler_object <- function(in_tabler) {
     process_osa(in_tabler$osa, in_tabler$absorbed_vars)
 
   if (this_format == 'markdown') {
-    knitr::kable(out_dt,
-                 caption = in_tabler$title,
-                 format = this_format) %>%
-      return()
+    ret_val <- knitr::kable(out_dt,
+                 caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
+                 format = this_format)
   } else {
 
     header_dt <- filter(out_dt, tblr_type %notin% c('C', 'G')) %>%
@@ -36,39 +36,56 @@ print.tabler_object <- function(in_tabler) {
       mutate(row_num = row_num - min(row_num) + 1)
 
     if (in_tabler$theme$group_factors) {  # If factors are to be grouped
-      ret_val <- mutate(body_dt, term = ifelse(suffix == '', term, suffix)) %>%
-        select(-base, -suffix, -tblr_type, -row_num, -key) %>%
-        knitr::kable(caption = in_tabler$title,
-                     format = this_format,
-                     col.names = NULL)
+      for_table_dt <- mutate(body_dt, base = ifelse(tblr_type == 'G', term, base)) %>%
+        mutate(term = ifelse(suffix == '', base, suffix)) %>%
+        mutate(term = ifelse(tblr_type == 'C' & key == 'sd', '', term)) %>%
+        select(-base, -suffix, -tblr_type, -row_num, -key)
+
+      names(for_table_dt) <- slice(header_dt, 1) %>%
+        unlist() %>%
+        unname()
+      ret_val <- knitr::kable(for_table_dt,
+                              caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
+                              format = this_format,
+                              align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
+                              booktabs = TRUE)
 
       pack_detail <- get_pack_details(body_dt)
       for (i in seq_along(pack_detail$base)) {
-        ret_val <- kableExtra::pack_rows(ret_val,
-                                         group_label = pack_detail$base[[i]],
+        ret_val <- kableExtra::group_rows(ret_val,
+                                         group_label = paste0(pack_detail$base[[i]], ':'),
                                          start_row = pack_detail$start[[i]],
-                                         end_row = pack_detail$end[[i]])
+                                         end_row = pack_detail$end[[i]],
+                                         label_row_css = '',
+                                         colnum = 1L,
+                                         bold = FALSE)
       }
     } else { # Factors are not to be grouped}
       ret_val <- select(ret_val, -base, -suffix, -tblr_type, -row_num, -key) %>%
-        knitr::kable(caption = in_tabler$title,
+        knitr::kable(caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
                      format = this_format,
                      col.names = NULL)
     }
 
     for (i in seq_along(header_dt$base)) {
-      names_to_add <- slice(header_dt, i) %>%
-        unlist() %>%
-        unname()
-      vec_to_add <- rep(1L, times = length(names_to_add))
-      names(vec_to_add) <- names_to_add
+      if (i > 1L) {  # Skip first header row (has already been added)
+        names_to_add <- slice(header_dt, i) %>%
+          unlist() %>%
+          unname()
+        vec_to_add <- rep(1L, times = length(names_to_add))
+        names(vec_to_add) <- names_to_add
 
-      ret_val <- add_header_above(ret_val, vec_to_add)
+        ret_val <- add_header_above(ret_val, vec_to_add, line = FALSE, bold = FALSE)
+      }
     }
   }
+
+  print(ret_val)
+  invisible(in_tabler)
 }
 
 #' @importFrom dplyr filter group_by summarize arrange
+#' @importFrom magrittr "%>%"
 get_pack_details <- function(in_table) {
   dplyr::filter(in_table, tblr_type == 'C' & suffix != '') %>%
     group_by(base) %>%
@@ -79,6 +96,7 @@ get_pack_details <- function(in_table) {
 
 #' @importFrom dplyr union filter mutate pull bind_rows select
 #' @importFrom purrr map_df
+#' @importFrom magrittr "%>%"
 process_osa <- function(tbl_dt, osa_obj, abs_var) {
   if (!is.na(osa_obj$omit)) {
     tbl_dt <- filter(tbl_dt,
@@ -155,6 +173,7 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
 #' @param dt The tibble prepared to be printed
 #' @importFrom dplyr filter mutate
 #' @importFrom purrr map_df
+#' @importFrom magrittr "%>%"
 suppress_compress <- function(suppress_var, dt) {
   filter(dt, tblr_type == 'C' & base == suppress_var) %>%
     purrr::map_df(~ if (all(.x == '')) '' else 'Y') %>%
@@ -219,6 +238,7 @@ order_coefs <- function(var_names, xlevels) {
 
 #' @importFrom purrr map pmap
 #' @importFrom tibble tibble
+#' @importFrom stringr str_split
 build_var_names <- function(var_name, xlevels) {
   if (grepl(':', var_name)) {
     interacted_vars <- str_split(var_name, ':') %>%
@@ -360,6 +380,7 @@ list_first <- function(dt, ...) {
 #' @importFrom purrr map_df
 #' @importFrom dplyr mutate right_join
 #' @importFrom tidyr spread
+#' @importFrom magrittr "%>%"
 build_absorb_dt <- function(absorb_list) {
   f <- function(i, al) {
     if (is.null(al[[i]])) {
@@ -378,6 +399,7 @@ build_absorb_dt <- function(absorb_list) {
                          stringsAsFactors = FALSE),
              by = c('term', 'value')) %>%
     mutate(beta = ifelse(is.na(beta), '', beta)) %>%
+    filter(!is.na(term)) %>%
     spread(value, beta, fill = '') %>%
     mutate(base = '',
            suffix = '',
