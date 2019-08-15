@@ -41,6 +41,10 @@ print.tabler_object <- function(in_tabler) {
         mutate(term = ifelse(tblr_type == 'C' & key == 'sd', '', term)) %>%
         select(-base, -suffix, -tblr_type, -row_num, -key)
 
+      last_coef_row <- filter(body_dt, tblr_type == 'C') %>%
+        filter(row_num == max(row_num)) %>%
+        pull(row_num)
+
       names(for_table_dt) <- slice(header_dt, 1) %>%
         unlist() %>%
         unname()
@@ -48,7 +52,8 @@ print.tabler_object <- function(in_tabler) {
                               caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
                               format = this_format,
                               align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
-                              booktabs = TRUE)
+                              booktabs = TRUE) %>%
+        kableExtra::row_spec(last_coef_row, hline_after = TRUE)
 
       pack_detail <- get_pack_details(body_dt)
       for (i in seq_along(pack_detail$base)) {
@@ -75,13 +80,17 @@ print.tabler_object <- function(in_tabler) {
         vec_to_add <- rep(1L, times = length(names_to_add))
         names(vec_to_add) <- names_to_add
 
-        ret_val <- add_header_above(ret_val, vec_to_add, line = FALSE, bold = FALSE)
+        ret_val <- add_header_above(ret_val,
+                                    vec_to_add,
+                                    line = FALSE,
+                                    bold = FALSE)
       }
     }
   }
 
-  print(ret_val)
-  invisible(in_tabler)
+  #cat(ret_val, sep = '\n')
+  #invisible(in_tabler)
+  ret_val
 }
 
 #' @importFrom dplyr filter group_by summarize arrange
@@ -302,15 +311,22 @@ output_coef_table <- function(tblr_obj) {
 #' @importFrom tibble rowid_to_column
 #' @importFrom tidyr gather spread
 output_gofs_table <- function(tblr_obj) {
+  order_dt <- tibble::tibble(key = names(tblr_obj$gof_list),
+                             long_name = unname(tblr_obj$gof_list)) %>%
+    tibble::rowid_to_column(var = 'order')
+
   ret_val <- tblr_obj$gofs %>%
     tibble::rowid_to_column(var = 'column') %>%
     mutate(column = sprintf('c_%i', column)) %>%
     tidyr::gather(key = 'key', value = 'value', -column) %>%
+    right_join(order_dt, by = 'key') %>%
     mutate(value = as.character(value)) %>%
     tidyr::spread(key = 'column', value = 'value') %>%
-    rename(term = key) %>%
+    rename(term = long_name) %>%
     mutate(base = '', suffix = '') %>%
-    mutate(tblr_type = 'G')
+    mutate(tblr_type = 'G') %>%
+    arrange(order) %>%
+    select(-key, -order)
 
   list_first(ret_val, 'base', 'term', 'suffix', 'tblr_type')
 }
@@ -349,7 +365,7 @@ output_colnum_table <- function(tblr_obj) {
   ret_val <- purrr::map_dfc(num_vec, ~ str_vec[[.x]])
   names(ret_val) <- sprintf('c_%i', num_vec)
 
-  mutate(ret_val, base = '', term = '', suffix = '', tblr_type = 'N') %>%
+  mutate(ret_val, base = ' ', term = ' ', suffix = ' ', tblr_type = 'N') %>%
     list_first('base', 'term', 'suffix', 'tblr_type')
 }
 

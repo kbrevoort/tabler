@@ -11,7 +11,10 @@ tabler <- function(...,
                    latex_label = NA_character_,
                    alias = NA_character_,
                    suppress = NA_character_,
-                   omit = NA_character_) {
+                   omit = NA_character_,
+                   gof_list = c(N = 'N',
+                                r.squared = 'R-squared',
+                                adj.r.squared = 'Adj. R-squared')) {
   in_cols <- list(...)
 
   # Check to make sure that every element of in_cols is a tabler_column
@@ -25,7 +28,7 @@ tabler <- function(...,
   tblr_obj$notes <- notes
   tblr_obj$number <- number
   tblr_obj$latex_label <- latex_label
-  tblr_obj$osa <- create_osa(alias, suppress, omit)
+  tblr_obj$osa <- create_osa(omit, suppress, alias)
 
   tblr_obj$dep_vars <- purrr::map_chr(in_cols, ~.x$dep_var)
   tblr_obj$var_names <- purrr::map(in_cols, ~.x$var_names) %>%
@@ -52,6 +55,8 @@ tabler <- function(...,
                                     tblr_obj$var_names,
                                     tblr_obj$xlevels)
 
+  tblr_obj$gof_list <- gof_list
+
   return(tblr_obj)
 }
 
@@ -65,7 +70,7 @@ create_osa <- function(omit = NULL, suppress = NULL, alias = NULL) {
   osa_obj$suppress <- NA_character_
   osa_obj$alias <- NA_character_
 
-  set_osa(osa_obj, omit, suppress, alias)
+  ret_val <- set_osa(osa_obj, omit = omit, suppress = suppress, alias = alias)
 }
 
 #' Set Omit-Suppress-Alias (OSA)
