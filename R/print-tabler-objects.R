@@ -320,7 +320,7 @@ output_gofs_table <- function(tblr_obj) {
     mutate(column = sprintf('c_%i', column)) %>%
     tidyr::gather(key = 'key', value = 'value', -column) %>%
     right_join(order_dt, by = 'key') %>%
-    mutate(value = as.character(value)) %>%
+    number2text() %>%
     tidyr::spread(key = 'column', value = 'value') %>%
     rename(term = long_name) %>%
     mutate(base = '', suffix = '') %>%
@@ -329,6 +329,21 @@ output_gofs_table <- function(tblr_obj) {
     select(-key, -order)
 
   list_first(ret_val, 'base', 'term', 'suffix', 'tblr_type')
+}
+
+number2text <- function(data) {
+  number_type <- group_by(data, key) %>%
+    summarize(max_num = max(value)) %>%
+    mutate(log_num = log10(abs(max_num))) %>%
+    select(key, log_num)
+
+  left_join(data, number_type, by = 'key') %>%
+    mutate(value = dplyr::case_when(
+      log_num < 0 ~ as.character(round(value, 3L)),
+      log_num >= 3 ~ prettyNum(round(value, 0), big.mark = ',', ),
+      TRUE ~ prettyNum(value, digits = 3L)
+    )) %>%
+    select(-log_num)
 }
 
 output_depvar_table <- function(tblr_obj) {
