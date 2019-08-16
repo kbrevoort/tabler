@@ -107,16 +107,18 @@ get_pack_details <- function(in_table) {
 #' @importFrom purrr map_df
 #' @importFrom magrittr "%>%"
 process_osa <- function(tbl_dt, osa_obj, abs_var) {
+  # Remove rows corresponding to the omit list
   if (!is.na(osa_obj$omit)) {
     tbl_dt <- filter(tbl_dt,
                      tblr_type != 'C' |
                        (base %notin% osa_obj$omit & term %notin% osa_obj$omit))
   }
 
+  # If there are any absorbed variables, add them to the coefficients here
   absorbed_dt <- build_absorb_dt(abs_var)
   if (!is.null(absorbed_dt)) {
-    # Add absorbed data to coefficients
     tbl_dt <- mutate(tbl_dt, row_num = row_number())
+    # Calculate hte row where the absorbed variabe is to be added
     add_place <- tbl_dt %>%
       filter(tblr_type == 'C') %>%
       pull(row_num) %>%
@@ -126,6 +128,7 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
                         filter(tbl_dt, row_num > add_place)) %>%
       select(-row_num)
 
+    # Add any absorbed variables to the suppress list
     if (is.na(osa_obj$suppress)) {
       osa_obj$suppress <- absorbed_dt$term
     } else {
@@ -133,6 +136,7 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
     }
   }
 
+  # Process the suppress list (will include absorbed variables)
   if (!is.na(osa_obj$suppress)) {
     # Produce rows that will replace suppressed variables
     replacement_dt <- purrr::map_df(osa_obj$suppress, suppress_compress, dt = tbl_dt)
@@ -171,6 +175,27 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
   }
 
   tbl_dt
+}
+}
+
+#' Add Suppressed Row
+#'
+#' Adds a new row of suppressed data to an existing table data.frame.
+#' @param row_dt A tibble containing one row of data to be added
+#' @param tbl_dt A tibble containing table information
+add_suppressed_row <- function(row_dt, tbl_dt) {
+  tbl_dt <- mutate(tbl_dt, row_num = row_number())
+
+  # Calculate hte row where the absorbed variabe is to be added
+  add_place <- tbl_dt %>%
+    filter(tblr_type == 'C') %>%
+    pull(row_num) %>%
+    max()
+
+  bind_rows(filter(tbl_dt, row_num <= add_place),
+            absorbed_dt,
+            filter(tbl_dt, row_num > add_place)) %>%
+    select(-row_num)
 }
 
 #' Suppress Compress
