@@ -149,7 +149,7 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
     # Remove suppressed rows
     tbl_dt <- filter(tbl_dt, tblr_type != 'C' | base %notin% osa_obj$suppress) %>%
       mutate(row_num = row_number()) %>%
-      add_suppressed_row(tbl_dt)
+      add_suppressed_row(row_dt = replacement_dt, .)
   }
 
   if (!is.na(osa_obj$alias)) {
