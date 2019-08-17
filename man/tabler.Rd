@@ -7,7 +7,8 @@
 tabler(..., title = NA_character_, notes = NA_character_,
   number = NA_character_, latex_label = NA_character_,
   alias = NA_character_, suppress = NA_character_,
-  omit = NA_character_)
+  omit = NA_character_, gof_list = c(N = "N", r.squared = "R-squared",
+  adj.r.squared = "Adj. R-squared"))
 }
 \description{
 This function produces the underlying tabler object.

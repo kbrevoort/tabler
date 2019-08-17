@@ -20,7 +20,8 @@ print.tabler_object <- function(in_tabler) {
     this_format <- in_tabler$theme$style
 
   out_dt <- purrr::map_df(my_order, get_tblr_component, in_tabler = in_tabler) %>%
-    process_osa(in_tabler$osa, in_tabler$absorbed_vars)
+    process_osa(in_tabler$osa, in_tabler$absorbed_vars) %>%
+    mutate(row_num = row_number())
 
   if (this_format == 'markdown') {
     ret_val <- knitr::kable(out_dt,
@@ -33,7 +34,7 @@ print.tabler_object <- function(in_tabler) {
       select(-term, -suffix, -tblr_type, -row_num, -key)
 
     body_dt <- filter(out_dt, tblr_type %in% c('C', 'G')) %>%
-      mutate(row_num = row_num - min(row_num) + 1)
+      mutate(row_num = row_num - min(row_num) + 1)  # restart row number at 1
 
     if (in_tabler$theme$group_factors) {  # If factors are to be grouped
       for_table_dt <- mutate(body_dt, base = ifelse(tblr_type == 'G', term, base)) %>%
@@ -103,7 +104,7 @@ get_pack_details <- function(in_table) {
     arrange(start)
 }
 
-#' @importFrom dplyr union filter mutate pull bind_rows select
+#' @importFrom dplyr union filter mutate pull bind_rows select starts_with
 #' @importFrom purrr map_df
 #' @importFrom magrittr "%>%"
 process_osa <- function(tbl_dt, osa_obj, abs_var) {
@@ -114,25 +115,29 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
                        (base %notin% osa_obj$omit & term %notin% osa_obj$omit))
   }
 
-  # If there are any absorbed variables, add them to the coefficients here
+  # If there are any absorbed variables, suppress existing coefficients (if
+  # necessary) or add a table
   absorbed_dt <- build_absorb_dt(abs_var)
   if (!is.null(absorbed_dt)) {
-    tbl_dt <- mutate(tbl_dt, row_num = row_number())
-    # Calculate hte row where the absorbed variabe is to be added
-    add_place <- tbl_dt %>%
-      filter(tblr_type == 'C') %>%
-      pull(row_num) %>%
-      max()
-    tbl_dt <- bind_rows(filter(tbl_dt, row_num <= add_place),
-                        absorbed_dt,
-                        filter(tbl_dt, row_num > add_place)) %>%
-      select(-row_num)
+    rows_to_add <- filter(tbl_dt,
+           base %in% absorbed_dt$term,
+           key == 'beta') %>%
+      bind_rows(absorbed_dt) %>%
+      select(base, term, suffix, tblr_type, starts_with('c_')) %>%
+      group_by(base, term, suffix, tblr_type) %>%
+      summarize_all(~ if(any(.x != '')) 'Y' else '') %>%
+      mutate(key = 'beta')
 
-    # Add any absorbed variables to the suppress list
-    if (is.na(osa_obj$suppress)) {
-      osa_obj$suppress <- absorbed_dt$term
-    } else {
-      osa_obj$suppress <- union(osa_obj$suppress, absorbed_dt$term)
+    # Replace any reference to one of the absorbed variables with 'Y' if that
+    # variable was used in that estimation
+    tbl_dt <- filter(tbl_dt, !(base %in% absorbed_dt$term)) %>%
+      add_suppressed_row(rows_to_add, .)
+
+    # If any of the absorbed variables appear in the suppression list, remove it
+    if (!is.na(osa_obj$suppress)) {
+      osa_obj$suppress <- setdiff(osa_obj$suppress, unique(absorbed_dt$term))
+      if (length(osa_obj$suppress) == 0)
+        osa_obj$suppress <- NA_character_
     }
   }
 
@@ -141,23 +146,10 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
     # Produce rows that will replace suppressed variables
     replacement_dt <- purrr::map_df(osa_obj$suppress, suppress_compress, dt = tbl_dt)
 
-    # IF there are absorbed variables add them here
-    absorbed_dt <- build_absorb_dt(abs_var)
-    if (!is.null(absorbed_dt))
-      replacement_dt <- dplyr::bind_rows(replacement_dt, absorbed_dt)
-
     # Remove suppressed rows
     tbl_dt <- filter(tbl_dt, tblr_type != 'C' | base %notin% osa_obj$suppress) %>%
-      mutate(row_num = row_number())
-
-    add_place <- tbl_dt %>%
-      filter(tblr_type == 'C') %>%
-      pull(row_num) %>%
-      max()
-    tblr_dt <- bind_rows(filter(tbl_dt, row_num <= add_place),
-                         replacement_dt,
-                         filter(tbl_dt, row_num > add_place)) %>%
-      select(-row_num)
+      mutate(row_num = row_number()) %>%
+      add_suppressed_row(tbl_dt)
   }
 
   if (!is.na(osa_obj$alias)) {
@@ -176,7 +168,7 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
 
   tbl_dt
 }
-}
+
 
 #' Add Suppressed Row
 #'
@@ -193,7 +185,7 @@ add_suppressed_row <- function(row_dt, tbl_dt) {
     max()
 
   bind_rows(filter(tbl_dt, row_num <= add_place),
-            absorbed_dt,
+            row_dt,
             filter(tbl_dt, row_num > add_place)) %>%
     select(-row_num)
 }
@@ -348,7 +340,7 @@ output_gofs_table <- function(tblr_obj) {
     number2text() %>%
     tidyr::spread(key = 'column', value = 'value') %>%
     rename(term = long_name) %>%
-    mutate(base = '', suffix = '') %>%
+    mutate(base = term, suffix = '') %>%
     mutate(tblr_type = 'G') %>%
     arrange(order) %>%
     select(-key, -order)
@@ -457,8 +449,9 @@ build_absorb_dt <- function(absorb_list) {
     mutate(beta = ifelse(is.na(beta), '', beta)) %>%
     filter(!is.na(term)) %>%
     spread(value, beta, fill = '') %>%
-    mutate(base = '',
+    mutate(base = term,
            suffix = '',
-           tblr_type = 'C') %>%
+           tblr_type = 'C',
+           key = 'beta') %>%
     list_first('base', 'term', 'suffix', 'tblr_type')
 }
