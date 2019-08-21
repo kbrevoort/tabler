@@ -17,6 +17,13 @@ tabler <- function(...,
                                 adj.r.squared = 'Adj. R-squared')) {
   in_cols <- list(...)
 
+  # Allow for a list of results to be supplied.
+  if (length(in_cols) == 1L) {
+    if (class(in_cols) == 'list') {
+      in_cols <- in_cols[[1]]
+    }
+  }
+
   # Check to make sure that every element of in_cols is a tabler_column
   # If it's not, then convert it.
   in_cols <- purrr::map_if(in_cols, not_tabler_column, make_column)
