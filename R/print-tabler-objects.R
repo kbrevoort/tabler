@@ -21,6 +21,7 @@ print.tabler_object <- function(in_tabler) {
 
   out_dt <- purrr::map_df(my_order, get_tblr_component, in_tabler = in_tabler) %>%
     process_osa(in_tabler$osa, in_tabler$absorbed_vars) %>%
+    process_alias(in_tabler) %>%
     mutate(row_num = row_number())
 
   if (this_format == 'markdown') {
@@ -104,7 +105,7 @@ get_pack_details <- function(in_table) {
     arrange(start)
 }
 
-#' @importFrom dplyr union filter mutate pull bind_rows select starts_with
+#' @importFrom dplyr union filter mutate pull bind_rows select starts_with summarize_all
 #' @importFrom purrr map_df
 #' @importFrom magrittr "%>%"
 process_osa <- function(tbl_dt, osa_obj, abs_var) {
@@ -152,23 +153,96 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
       add_suppressed_row(row_dt = replacement_dt, .)
   }
 
-  if (!is.na(osa_obj$alias)) {
-    for (i in seq_along(osa_obj$alias)) {
-      this_name <- names(osa_obj$alias)[i]
-      this_alias <- unname(osa_obj$alias)[i]
-
-      if (any(tbl_dt$base == this_name)) {
-        tbl_dt$base[tbl_dt$base == this_name] <- this_alias
-      }
-      if (any(tbl_dt$term == this_name)) {
-        tbl_dt$suffix[tbl_dt$term == this_name] <- this_alias
-      }
-    }
-  }
+  # if (!is.na(osa_obj$alias)) {
+  #   for (i in seq_along(osa_obj$alias)) {
+  #     this_name <- names(osa_obj$alias)[i]
+  #     this_alias <- unname(osa_obj$alias)[i]
+  #
+  #     if (any(tbl_dt$base == this_name)) {
+  #       tbl_dt$base[tbl_dt$base == this_name] <- this_alias
+  #     }
+  #     if (any(tbl_dt$term == this_name)) {
+  #       tbl_dt$suffix[tbl_dt$term == this_name] <- this_alias
+  #     }
+  #   }
+  # }
 
   tbl_dt
 }
 
+#' Process Alias
+#'
+#'
+process_alias <- function(tbl_dt, tbl_obj) {
+  tbl_dt <- mutate(tbl_dt, row_num = row_number())
+
+  if (any(!is.na(tbl_obj$osa$alias))) {
+    coef_dt <- filter(tbl_dt, tblr_type == 'C') %>%
+      mutate(row_num = row_number())
+
+    alias_dt <- tibble::tibble(var = names(tbl_obj$osa$alias),
+                               alias = tbl_obj$osa$alias)
+
+    base_dt <- expand_interaction_to_dt(coef_dt$base) %>%
+      left_join(alias_dt, by = 'var') %>%
+      mutate(alias = ifelse(is.na(alias), var, alias)) %>%
+      select(row_num, alias) %>%
+      compress_interaction_dt() %>%
+      rename(base_alias = alias)
+
+    term_dt <- expand_interaction_to_dt(coef_dt$term) %>%
+      left_join(alias_dt, by = 'var') %>%
+      mutate(alias = ifelse(is.na(alias), '', alias)) %>%
+      select(row_num, alias) %>%
+      compress_interaction_dt() %>%
+      rename(term_alias = alias)
+
+    new_dt <- left_join(coef_dt, base_dt, by = 'row_num') %>%
+      left_join(term_dt, by = 'row_num') %>%
+      mutate(base = base_alias) %>%
+      mutate(suffix = suffix_to_alias(suffix, term_alias)) %>%
+      select(-row_num, -base_alias, -term_alias) %>%
+      list_first('base', 'term', 'suffix', 'tblr_type')
+
+    spot_dt <- filter(tbl_dt, tblr_type == 'C') %>%
+      summarize(lowest = min(row_num),
+                highest = max(row_num))
+
+    tbl_dt <- bind_rows(filter(tbl_dt, row_num < spot_dt$lowest),
+              new_dt,
+              filter(tbl_dt, row_num > spot_dt$highest))
+  }
+
+  select(tbl_dt, -row_num)
+}
+
+suffix_to_alias <- function(suf, a) {
+  bind_cols(expand_interaction_to_dt(suf, ' \u2613 '),
+            expand_interaction_to_dt(a, ' \u2613 ')) %>%
+    mutate(alias = ifelse(var1 == '', var, var1)) %>%
+    select(row_num, alias) %>%
+    compress_interaction_dt() %>%
+    pull(alias)
+}
+
+expand_interaction_to_dt <- function(x, sep = ':') {
+  str_split(x, sep) %>%
+    purrr::map_dfr(~ tibble::tibble(var = .x), .id = 'row_num') %>%
+    mutate(row_num = as.integer(row_num))
+}
+
+compress_interaction_dt <- function(data) {
+  unique_i <- unique(data$row_num)
+
+  compress_dt <- function(i, dt) {
+    filter(dt, row_num == i) %>%
+      pull(alias) %>%
+      paste(collapse = ' \u2613 ') %>%
+      tibble::tibble(row_num = i, alias = .)
+  }
+
+  purrr::map_dfr(unique_i, compress_dt, dt = data)
+}
 
 #' Add Suppressed Row
 #'
@@ -240,7 +314,7 @@ get_tblr_component <- function(x, in_tabler) {
 #' @importFrom tidyr gather spread
 coef_to_dt <- function(coef_dt, sig_levels) {
   ret_val <- mutate(coef_dt, beta = sprintf('%s%s',
-                                 prettyNum(coef_dt$estimate, big.mark = ',', digits = 3L),
+                                 num(coef_dt$estimate, digits = 3L),
                                  cut(coef_dt$p.value,
                                      breaks = c(-1, sig_levels, 1),
                                      labels = c(names(sig_levels), '')))) %>%
