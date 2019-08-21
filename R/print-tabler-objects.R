@@ -340,7 +340,7 @@ order_coefs <- function(var_names, xlevels) {
 #' @importFrom tibble tibble
 #' @importFrom stringr str_split
 build_var_names <- function(var_name, xlevels) {
-  if (grepl(':', var_name)) {
+  if (grepl('[:alnum:]:[:alnum:]', var_name)) {
     interacted_vars <- str_split(var_name, ':') %>%
       unlist()
 
