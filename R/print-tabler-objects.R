@@ -216,6 +216,7 @@ process_alias <- function(tbl_dt, tbl_obj) {
   select(tbl_dt, -row_num)
 }
 
+#' @importFrom dplyr bind_cols mutate select pull
 suffix_to_alias <- function(suf, a) {
   bind_cols(expand_interaction_to_dt(suf, ' \u2613 '),
             expand_interaction_to_dt(a, ' \u2613 ')) %>%
@@ -225,8 +226,16 @@ suffix_to_alias <- function(suf, a) {
     pull(alias)
 }
 
+#' @importFrom purrr map_dfr
+#' @importFrom dplyr mutate
+#' @importFrom stringr str_split str_replace_all
 expand_interaction_to_dt <- function(x, sep = ':') {
-  str_split(x, sep) %>%
+  my_pattern <- sprintf('([[:alnum:]])%s([[:alnum:]])', sep)
+  
+  # I am using the character string %*%*%*% as a (hopefully) unique way of 
+  # designating where to split
+  stringr::str_replace_all(x, my_pattern, "\\1%*%*%*%\\2") %>%
+    stringr::str_split("%*%*%*%") %>%
     purrr::map_dfr(~ tibble::tibble(var = .x), .id = 'row_num') %>%
     mutate(row_num = as.integer(row_num))
 }
@@ -522,6 +531,10 @@ list_first <- function(dt, ...) {
     select(dt, .)
 }
 
+#' Build Absorb Data
+#'                 
+#' Create a data.frame that contains information on the absorbed values used in 
+#' each estimation.
 #' @importFrom tibble tibble
 #' @importFrom purrr map_df
 #' @importFrom dplyr mutate right_join
