@@ -437,8 +437,30 @@ number2text <- function(data) {
     select(-log_num)
 }
 
+#' Alias Column Names
+#'
+#' Takes a character vector of column names (such as dependent variables or
+#' statistical methods) and determines whether an alias has been supplied.  If
+#' so, this function replaces that element
+#' @param x Character vector
+#' @param alias_list The named list of aliase contained by a tabler object
+#' @return A character vector of the same length of x, where elements have been
+#' replaced by their alias if an alias exists
+alias_column_names <- function(x, alias_list) {
+  if (any(!is.na(alias_list))) {
+    x <- tibble::tibble(y = x,
+                        alias = unname(alias_list[x])) %>%
+      mutate(new_y = ifelse(is.na(alias), y, alias)) %>%
+      pull(new_y)
+  }
+
+  x
+}
+
 output_depvar_table <- function(tblr_obj) {
-  start_df(tblr_obj$dep_vars) %>%
+  my_dep_vars <- alias_column_names(tblr_obj$dep_vars, tblr_obj$osa$alias)
+
+  start_df(my_dep_vars) %>%
     mutate(base = 'Dep. Variable:',
            term = '',
            suffix = '',
@@ -447,7 +469,9 @@ output_depvar_table <- function(tblr_obj) {
 }
 
 output_method_table <- function(tblr_obj) {
-  start_df(tblr_obj$est_types) %>%
+  my_est_types <- alias_column_names(tblr_obj$est_types, tblr_obj$osa$alias)
+
+  start_df(my_est_types) %>%
     mutate(base = 'Method:',
            term = '',
            suffix = '',
