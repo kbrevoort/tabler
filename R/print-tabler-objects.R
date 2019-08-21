@@ -536,16 +536,11 @@ build_absorb_dt <- function(absorb_list) {
     }
   }
 
-  # The absorb list can contain a list of character vectors. This replaces that
-  # with a single character vector of unique values
-  absorb_list <- unlist(absorb_list) %>%
-    unique()
-
   temp <- purrr::map_df(seq_along(absorb_list), f, al = absorb_list) %>%
     mutate(beta = 'Y')
 
   right_join(temp,
-             expand.grid(term = temp$term,
+             expand.grid(term = unique(temp$term),
                          value = sprintf('c_%i', seq_along(absorb_list)),
                          stringsAsFactors = FALSE),
              by = c('term', 'value')) %>%
