@@ -112,6 +112,7 @@ get_pack_details <- function(in_table) {
     group_by(base) %>%
     summarize(start = min(row_num),
               end = max(row_num)) %>%
+    filter(end > start) %>% # This will avoid single-variable factors
     arrange(start)
 }
 
