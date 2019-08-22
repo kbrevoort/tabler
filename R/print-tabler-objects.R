@@ -216,6 +216,7 @@ process_alias <- function(tbl_dt, tbl_obj) {
   select(tbl_dt, -row_num)
 }
 
+#' @importFrom dplyr bind_cols mutate select pull
 suffix_to_alias <- function(suf, a) {
   bind_cols(expand_interaction_to_dt(suf, ' \u2613 '),
             expand_interaction_to_dt(a, ' \u2613 ')) %>%
@@ -457,22 +458,24 @@ alias_column_names <- function(x, alias_list) {
   x
 }
 
+#' @importFrom kableExtra cell_spec text_spec
 output_depvar_table <- function(tblr_obj) {
   my_dep_vars <- alias_column_names(tblr_obj$dep_vars, tblr_obj$osa$alias)
 
   start_df(my_dep_vars) %>%
-    mutate(base = 'Dep. Variable:',
+    mutate(base = text_spec('Dep. Variable:', align = 'r', escape = FALSE),
            term = '',
            suffix = '',
            tblr_type = 'D') %>%
     list_first('base', 'term', 'suffix', 'tblr_type')
 }
 
+#' @importFrom kableExtra cell_spec
 output_method_table <- function(tblr_obj) {
   my_est_types <- alias_column_names(tblr_obj$est_types, tblr_obj$osa$alias)
 
   start_df(my_est_types) %>%
-    mutate(base = 'Method:',
+    mutate(base = cell_spec('Method:', align = 'r'),
            term = '',
            suffix = '',
            tblr_type = 'M') %>%
