@@ -33,6 +33,7 @@ make_column.lm <- function(in_result) {
     gof$dep_var_mean <- mean(in_result$model[,1])
   col_obj$gof <- gof
 
+  col_obj <- check_for_logicals(col_obj)
   return(col_obj)
 }
 
@@ -46,7 +47,7 @@ make_column.felm <- function(in_result) {
                  names(in_result$fe))
   col_obj$var_names <- var_names
   col_obj$est_type <- class(in_result)[1]
-  
+
   # Expanded xlevels creation -- previous method only included absorbed FEs, not
   # factor variables as well.
   fe_xlevels <- purrr::map(names(in_result$fe), ~ levels(in_result$fe[[.x]]))
@@ -63,6 +64,7 @@ make_column.felm <- function(in_result) {
   gof$dep_var_mean <- mean(in_result$response)
   col_obj$gof <- gof
 
+  col_obj <- check_for_logicals(col_obj)
   col_obj
 }
 
@@ -77,4 +79,78 @@ build_felm_factor_levels <- function(unaccounted, var_names) {
   }
 
   if (length(ret_val) == 0) NULL else ret_val
+}
+
+#' Check for Logicals
+#'
+#' Explores the tabler_column object information to determine if there are any
+#' coefficients that are logical values that have not been appropriately
+#' handled. Any that are found are added to the list of factor variables.
+#' @param col_obj A tabler_column object
+#' @return The same tabler_column with new xlevels added to pick up any logical
+#' variables thare found.
+check_for_logicals <- function(col_obj) {
+  # all possible known variables
+  complete_name_list <- order_coefs(col_obj$var_names, xlevels = col_obj$xlevels) %>%
+    pull(term)
+
+  # variable names that appears in the coefficient list
+  coefs_name <- col_obj$coef$term
+
+  # Currnetly unknown variables
+  missing_names <- setdiff(coefs_name, complete_name_list)
+
+  if (length(missing_names) > 0) {
+    new_factors <- purrr::map_dfr(missing_names,
+                                  identify_logical_variables,
+                                  var_names = col_obj$var_names)
+
+    for (nm in unique(new_factors$var_name)) {
+      nm_levels <- filter(new_factors, var_name == nm) %>%
+        pull(xlevel)
+
+      # Update the xlevels for the col_obj
+      if (nm %in% names(col_obj$xlevels)) {
+        col_obj$xlevels[[nm]] <- unique(c(col_obj$xlevels[[nm]], nm_levels))
+      } else {
+        col_obj$xlevels[[nm]] <- nm_levels
+      }
+    }
+  }
+
+  col_obj
+}
+
+
+#' Identify Logical Variables
+#'
+#' Examine unaccounted for variables from the coefficient matrix and determine
+#' which are logical.  This returns 1 element of a data.frame of data that
+#' gives the variable name and logical result of those variables. Otherwise,
+#' throws a warning if the unaccounted for name is not logical.
+#' @param x A character scalar with an unaccounted for variable name
+#' @param var_names List of known variables in the estimation
+#' @return A tibble with the name of the variable (if it is logical) and its
+#' logical value.
+#' @importFrom tibble tibble
+identify_logical_variables <- function(x, var_names) {
+  n <- nchar(x)
+  if (substr(x, n - 3L, n) == "TRUE") {
+    ret_val <- tibble::tibble(var_name = substr(x, 1L, n - 4L),
+                              xlevel = 'TRUE')
+  } else if (substr(x, n - 4L, n) == "FALSE") {
+    ret_val <- tibble::tibble(var_name = substr(x, 1L, n - 5L),
+                              xlevel = 'FALSE')
+  } else {
+    sprintf('Unaccounted for variable found:  %s', x) %>%
+      warning()
+    return(NULL)
+  }
+
+  if (!pull(ret_val, var_name) %in% var_names)
+    sprintf('Found logical variable that does not appear in variable list:  %s',
+            pull(ret_val, var_name)) %>%
+    warning()
+
+  ret_val
 }

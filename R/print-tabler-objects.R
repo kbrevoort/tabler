@@ -230,12 +230,14 @@ suffix_to_alias <- function(suf, a) {
 #' @importFrom dplyr mutate
 #' @importFrom stringr str_split str_replace_all
 expand_interaction_to_dt <- function(x, sep = ':') {
-  my_pattern <- sprintf('([[:alnum:]])%s([[:alnum:]])', sep)
+  if (sep == ':') {
+    x <- stringr::str_replace_all(x,
+                                  '([[:alnum:]]):([[:alnum:]])',
+                                  '\\1%#%#%#%\\2')
+    sep <- '%#%#%#%'
+  }
 
-  # I am using the character string %*%*%*% as a (hopefully) unique way of
-  # designating where to split
-  stringr::str_replace_all(x, my_pattern, "\\1%*%*%*%\\2") %>%
-    stringr::str_split("%*%*%*%") %>%
+  stringr::str_split(x, sep) %>%
     purrr::map_dfr(~ tibble::tibble(var = .x), .id = 'row_num') %>%
     mutate(row_num = as.integer(row_num))
 }
@@ -349,7 +351,7 @@ order_coefs <- function(var_names, xlevels) {
 #' @importFrom tibble tibble
 #' @importFrom stringr str_split
 build_var_names <- function(var_name, xlevels) {
-  if (grepl('[:alnum:]:[:alnum:]', var_name)) {
+  if (grepl('[[:alnum:]]:[[:alnum:]]', var_name)) {
     interacted_vars <- str_split(var_name, ':') %>%
       unlist()
 
