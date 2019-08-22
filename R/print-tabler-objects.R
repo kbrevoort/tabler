@@ -37,6 +37,16 @@ print.tabler_object <- function(in_tabler) {
     body_dt <- filter(out_dt, tblr_type %in% c('C', 'G')) %>%
       mutate(row_num = row_num - min(row_num) + 1)  # restart row number at 1
 
+    # Handle logical variables
+    body_dt <- mutate(body_dt, base = ifelse(suffix %in% c("TRUE", "FALSE"),
+                                             sprintf("%s == %s", base, suffix),
+                                             base)) %>%
+      mutate(suffix = ifelse(suffix %in% c("TRUE", "FALSE"), "", suffix))
+
+    # Some suppressed variables have a suffix that matches base, which leads to
+    # unnecessarily grouping that variable under a factor heading.
+    body_dt <- mutate(body_dt, suffix = ifelse(suffix == base, '', suffix))
+
     if (in_tabler$theme$group_factors) {  # If factors are to be grouped
       for_table_dt <- mutate(body_dt, base = ifelse(tblr_type == 'G', term, base)) %>%
         mutate(term = ifelse(suffix == '', base, suffix)) %>%
@@ -135,7 +145,7 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
       add_suppressed_row(rows_to_add, .)
 
     # If any of the absorbed variables appear in the suppression list, remove it
-    if (!is.na(osa_obj$suppress)) {
+    if (any(!is.na(osa_obj$suppress))) {
       osa_obj$suppress <- setdiff(osa_obj$suppress, unique(absorbed_dt$term))
       if (length(osa_obj$suppress) == 0)
         osa_obj$suppress <- NA_character_
@@ -143,7 +153,7 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
   }
 
   # Process the suppress list (will include absorbed variables)
-  if (!is.na(osa_obj$suppress)) {
+  if (any(!is.na(osa_obj$suppress))) {
     # Produce rows that will replace suppressed variables
     replacement_dt <- purrr::map_df(osa_obj$suppress, suppress_compress, dt = tbl_dt)
 
