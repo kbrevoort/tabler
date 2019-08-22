@@ -110,7 +110,7 @@ get_pack_details <- function(in_table) {
 #' @importFrom magrittr "%>%"
 process_osa <- function(tbl_dt, osa_obj, abs_var) {
   # Remove rows corresponding to the omit list
-  if (!is.na(osa_obj$omit)) {
+  if (any(!is.na(osa_obj$omit))) {
     tbl_dt <- filter(tbl_dt,
                      tblr_type != 'C' |
                        (base %notin% osa_obj$omit & term %notin% osa_obj$omit))
@@ -231,8 +231,8 @@ suffix_to_alias <- function(suf, a) {
 #' @importFrom stringr str_split str_replace_all
 expand_interaction_to_dt <- function(x, sep = ':') {
   my_pattern <- sprintf('([[:alnum:]])%s([[:alnum:]])', sep)
-  
-  # I am using the character string %*%*%*% as a (hopefully) unique way of 
+
+  # I am using the character string %*%*%*% as a (hopefully) unique way of
   # designating where to split
   stringr::str_replace_all(x, my_pattern, "\\1%*%*%*%\\2") %>%
     stringr::str_split("%*%*%*%") %>%
@@ -534,8 +534,8 @@ list_first <- function(dt, ...) {
 }
 
 #' Build Absorb Data
-#'                 
-#' Create a data.frame that contains information on the absorbed values used in 
+#'
+#' Create a data.frame that contains information on the absorbed values used in
 #' each estimation.
 #' @importFrom tibble tibble
 #' @importFrom purrr map_df
