@@ -226,8 +226,16 @@ suffix_to_alias <- function(suf, a) {
     pull(alias)
 }
 
+#' @importFrom purrr map_dfr
+#' @importFrom dplyr mutate
+#' @importFrom stringr str_split str_replace_all
 expand_interaction_to_dt <- function(x, sep = ':') {
-  str_split(x, sep) %>%
+  my_pattern <- sprintf('([[:alnum:]])%s([[:alnum:]])', sep)
+  
+  # I am using the character string %*%*%*% as a (hopefully) unique way of 
+  # designating where to split
+  stringr::str_replace_all(x, my_pattern, "\\1%*%*%*%\\2") %>%
+    stringr::str_split("%*%*%*%") %>%
     purrr::map_dfr(~ tibble::tibble(var = .x), .id = 'row_num') %>%
     mutate(row_num = as.integer(row_num))
 }
@@ -341,7 +349,7 @@ order_coefs <- function(var_names, xlevels) {
 #' @importFrom tibble tibble
 #' @importFrom stringr str_split
 build_var_names <- function(var_name, xlevels) {
-  if (grepl(':', var_name)) {
+  if (grepl('[:alnum:]:[:alnum:]', var_name)) {
     interacted_vars <- str_split(var_name, ':') %>%
       unlist()
 
@@ -525,6 +533,10 @@ list_first <- function(dt, ...) {
     select(dt, .)
 }
 
+#' Build Absorb Data
+#'                 
+#' Create a data.frame that contains information on the absorbed values used in 
+#' each estimation.
 #' @importFrom tibble tibble
 #' @importFrom purrr map_df
 #' @importFrom dplyr mutate right_join
@@ -543,7 +555,7 @@ build_absorb_dt <- function(absorb_list) {
     mutate(beta = 'Y')
 
   right_join(temp,
-             expand.grid(term = temp$term,
+             expand.grid(term = unique(temp$term),
                          value = sprintf('c_%i', seq_along(absorb_list)),
                          stringsAsFactors = FALSE),
              by = c('term', 'value')) %>%
