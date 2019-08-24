@@ -26,8 +26,9 @@ print.tabler_object <- function(in_tabler) {
 
   if (this_format == 'markdown') {
     ret_val <- knitr::kable(out_dt,
-                 caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
-                 format = this_format)
+                            caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
+                            format = this_format,
+                            escape = FALSE)
   } else {
 
     header_dt <- filter(out_dt, tblr_type %notin% c('C', 'G')) %>%
@@ -64,7 +65,8 @@ print.tabler_object <- function(in_tabler) {
                               caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
                               format = this_format,
                               align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
-                              booktabs = TRUE) %>%
+                              booktabs = TRUE,
+                              escape = FALSE) %>%
         kableExtra::row_spec(last_coef_row, hline_after = TRUE)
 
       pack_detail <- get_pack_details(body_dt)
@@ -81,7 +83,8 @@ print.tabler_object <- function(in_tabler) {
       ret_val <- select(ret_val, -base, -suffix, -tblr_type, -row_num, -key) %>%
         knitr::kable(caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
                      format = this_format,
-                     col.names = NULL)
+                     col.names = NULL,
+                     escape = FALSE)
     }
 
     for (i in seq_along(header_dt$base)) {
@@ -496,7 +499,7 @@ output_method_table <- function(tblr_obj) {
   my_est_types <- alias_column_names(tblr_obj$est_types, tblr_obj$osa$alias)
 
   start_df(my_est_types) %>%
-    mutate(base = cell_spec('Method:', align = 'r'),
+    mutate(base = text_spec('Method', align = 'r', escape = FALSE),
            term = '',
            suffix = '',
            tblr_type = 'M') %>%
