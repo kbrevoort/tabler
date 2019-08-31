@@ -19,7 +19,7 @@ print.tabler_object <- function(in_tabler) {
   if (is.null(this_format))
     this_format <- in_tabler$theme$style
 
-  out_dt <- purrr::map_df(my_order, get_tblr_component, in_tabler = in_tabler) %>%
+  out_dt <- purrr::map_df(my_order, get_tblr_component, in_tabler = in_tabler, this_format) %>%
     process_osa(in_tabler$osa, in_tabler$absorbed_vars) %>%
     process_alias(in_tabler) %>%
     mutate(row_num = row_number())
@@ -98,9 +98,15 @@ print.tabler_object <- function(in_tabler) {
         ret_val <- add_header_above(ret_val,
                                     vec_to_add,
                                     line = FALSE,
-                                    bold = FALSE)
+                                    bold = FALSE,
+                                    escape = FALSE)
       }
     }
+
+    # Check for errantn text codes where multicolumn contains another multicolumn
+    ret_val[[1]] <- stringr::str_replace_all(ret_val[[1]],
+                                             'multicolumn\\{[0-9]\\}\\{[a-z]\\}\\{(multicolumn\\{[0-9]\\}\\{[:alpha:]\\}\\{[:alnum:]+\\})\\}',
+                                             '\\1')
   }
 
   #cat(ret_val, sep = '\n')
@@ -309,7 +315,7 @@ suppress_compress <- function(suppress_var, dt) {
            key = 'beta')
 }
 
-get_tblr_component <- function(x, in_tabler) {
+get_tblr_component <- function(x, in_tabler, in_format) {
   if (x == 'C') {
     ret_val <- output_coef_table(in_tabler)
   } else if (x == 'G') {
@@ -317,9 +323,9 @@ get_tblr_component <- function(x, in_tabler) {
   } else if (x == 'N') {
     ret_val <- output_colnum_table(in_tabler)
   } else if (x == 'D') {
-    ret_val <- output_depvar_table(in_tabler)
+    ret_val <- output_depvar_table(in_tabler, in_format)
   } else if (x == 'M') {
-    ret_val <- output_method_table(in_tabler)
+    ret_val <- output_method_table(in_tabler, in_format)
   } else ret_val <- NULL
 
   ret_val
@@ -483,11 +489,11 @@ alias_column_names <- function(x, alias_list) {
 }
 
 #' @importFrom kableExtra cell_spec text_spec
-output_depvar_table <- function(tblr_obj) {
+output_depvar_table <- function(tblr_obj, in_format) {
   my_dep_vars <- alias_column_names(tblr_obj$dep_vars, tblr_obj$osa$alias)
 
   start_df(my_dep_vars) %>%
-    mutate(base = text_spec('Dep. Variable:', align = 'r', escape = FALSE),
+    mutate(base = text_spec('Dep. Variable:', align = 'r', escape = FALSE, format = in_format),
            term = '',
            suffix = '',
            tblr_type = 'D') %>%
@@ -495,11 +501,11 @@ output_depvar_table <- function(tblr_obj) {
 }
 
 #' @importFrom kableExtra cell_spec
-output_method_table <- function(tblr_obj) {
+output_method_table <- function(tblr_obj, in_format) {
   my_est_types <- alias_column_names(tblr_obj$est_types, tblr_obj$osa$alias)
 
   start_df(my_est_types) %>%
-    mutate(base = text_spec('Method', align = 'r', escape = FALSE),
+    mutate(base = text_spec('Method', align = 'r', escape = FALSE, format = in_format),
            term = '',
            suffix = '',
            tblr_type = 'M') %>%
