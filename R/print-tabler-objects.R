@@ -103,7 +103,7 @@ print.tabler_object <- function(in_tabler) {
       }
     }
 
-    # Check for errantn text codes where multicolumn contains another multicolumn
+    # Check for errant text codes where multicolumn contains another multicolumn
     ret_val[[1]] <- stringr::str_replace_all(ret_val[[1]],
                                              'multicolumn\\{[0-9]\\}\\{[a-z]\\}\\{(multicolumn\\{[0-9]\\}\\{[:alpha:]\\}\\{[:alnum:]+\\})\\}',
                                              '\\1')
@@ -112,6 +112,119 @@ print.tabler_object <- function(in_tabler) {
   #cat(ret_val, sep = '\n')
   #invisible(in_tabler)
   ret_val
+}
+
+tabler2kable <- function(tblr_obj, format = NULL) {
+  # Establish the format
+  if (is.null(format)) {
+    this_format <- getOption('knitr.table.format')
+    if (is.null(this_format))
+      this_format <- tblr_obj$theme$style
+  } else this_format <- format
+
+  out_dt <- purrr::map_df(strsplit(in_tabler$theme$order, '')[[1]],
+                          get_tblr_component,
+                          in_tabler = in_tabler,
+                          this_format) %>%
+    process_osa(in_tabler$osa, in_tabler$absorbed_vars) %>%
+    process_alias(in_tabler) %>%
+    mutate(row_num = row_number())
+
+  if (this_format == 'markdown')
+    knitr::kable(out_dt,
+                 caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
+                 format = this_format,
+                 escape = FALSE) %>%
+    return()
+
+  # The remainder of the function applies to HTML or LaTeX
+  header_dt <- filter(out_dt, tblr_type %notin% c('C', 'G'))
+  body_dt <- assemble_body_dt(out_dt)
+  last_coef_row <- filter(body_dt, tblr_type == 'C') %>%
+    filter(row_num == max(row_num)) %>%
+    pull(row_num)
+
+  if (in_tabler$theme$group_factors) {  # If factors are to be grouped
+    for_table_dt <- mutate(body_dt, base = ifelse(tblr_type == 'G', term, base)) %>%
+      mutate(term = ifelse(suffix == '', base, suffix)) %>%
+      mutate(term = ifelse(tblr_type == 'C' & key == 'sd', '', term)) %>%
+      select(-base, -suffix, -tblr_type, -row_num, -key)
+    pack_detail <- get_pack_details(body_dt)
+  } else {
+    for_table_dt <- select(body_dt, -base, -suffix, -tblr_type, -row_num, -key)
+    pack_detail <- NULL
+  }
+
+  knitr::kable(for_table_dt,
+               caption = if (is.na(tblr_obj$title)) NULL else tblr_obj$title,
+               format = this_format,
+               align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
+               booktabs = TRUE,
+               escape = FALSE,
+               col.names = NULL) %>%
+    kableExtra::row_spec(last_coef_row, hline_after = TRUE) %>%
+    do_packing(pack_detail) %>%
+    add_header_rows(header_dt) %>%
+    clean_errant_codes()
+}
+
+#' Check for Errant Codes
+#'
+#' Check for errant text codes where multicolumn contains another multicolumn
+#' @param in_kable Kable object to process
+#' @return Kable object
+#' @importFrom stringr str_replace_all
+clean_errant_codes <- function(in_kable) {
+  in_kable[[1]] <- stringr::str_replace_all(in_kable[[1]],
+                                            'multicolumn\\{[0-9]\\}\\{[a-z]\\}\\{(multicolumn\\{[0-9]\\}\\{[:alpha:]\\}\\{[:alnum:]+\\})\\}',
+                                            '\\1')
+  in_kable
+}
+
+add_header_rows <- function(in_kable, data) {
+  if (is.null(data) | is.empty(data)) return(in_kable)
+
+  header_dt <- arrange(data, -row_num) %>%
+    select(-term, -suffix, -tblr_type, -row_num, -key)
+
+  k <- dim(data)[2]
+  for (i in seq_along(header_dt$base))
+    in_kable <- add_header_above(in_kable,
+                                 setNames(rep(1L, times = k),
+                                          unname(unlist(slice(header_dt, i)))),
+                                 line = FALSE,
+                                 bold = FALSE,
+                                 escape = FALSE)
+
+  in_kable
+}
+
+do_packing <- function(in_kable, data) {
+  if (is.null(data)) return(in_kable)
+
+  for (i in seq_along(data$base)) {
+    in_kable <- kableExtra::group_rows(in_kable,
+                                      group_label = paste0(data$base[[i]], ':'),
+                                      start_row = data$start[[i]],
+                                      end_row = data$end[[i]],
+                                      label_row_css = '',
+                                      colnum = 1L,
+                                      bold = FALSE)
+  }
+  in_kable
+}
+
+assemble_body_dt <- function(data) {
+  filter(data, tblr_type %in% c('C', 'G')) %>%
+    mutate(row_num = row_num - min(row_num) + 1) %>% # restart row number at 1
+    # Handle logical variables
+    mutate(base = ifelse(suffix %in% c("TRUE", "FALSE"),
+                         sprintf("%s == %s", base, suffix),
+                         base)) %>%
+    mutate(suffix = ifelse(suffix %in% c("TRUE", "FALSE"), "", suffix)) %>%
+    # Some suppressed variables have a suffix that matches base, which leads
+    # to unnecessarily grouping that variable under a factor heading
+    mutate(suffix = ifelse(suffix == base, '', suffix))
 }
 
 #' @importFrom dplyr filter group_by summarize arrange
