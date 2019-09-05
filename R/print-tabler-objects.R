@@ -10,108 +10,7 @@
 #' @importFrom magrittr "%>%"
 #' @export
 print.tabler_object <- function(in_tabler) {
-
-  my_order <- in_tabler$theme$order %>%
-    strsplit('') %>%
-    unlist()
-
-  this_format <- getOption('knitr.table.format')
-  if (is.null(this_format))
-    this_format <- in_tabler$theme$style
-
-  out_dt <- purrr::map_df(my_order, get_tblr_component, in_tabler = in_tabler, this_format) %>%
-    process_osa(in_tabler$osa, in_tabler$absorbed_vars) %>%
-    process_alias(in_tabler) %>%
-    mutate(row_num = row_number())
-
-  if (this_format == 'markdown') {
-    ret_val <- knitr::kable(out_dt,
-                            caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
-                            format = this_format,
-                            escape = FALSE)
-  } else {
-
-    header_dt <- filter(out_dt, tblr_type %notin% c('C', 'G')) %>%
-      arrange(-row_num) %>%
-      select(-term, -suffix, -tblr_type, -row_num, -key)
-
-    body_dt <- filter(out_dt, tblr_type %in% c('C', 'G')) %>%
-      mutate(row_num = row_num - min(row_num) + 1)  # restart row number at 1
-
-    # Handle logical variables
-    body_dt <- mutate(body_dt, base = ifelse(suffix %in% c("TRUE", "FALSE"),
-                                             sprintf("%s == %s", base, suffix),
-                                             base)) %>%
-      mutate(suffix = ifelse(suffix %in% c("TRUE", "FALSE"), "", suffix))
-
-    # Some suppressed variables have a suffix that matches base, which leads to
-    # unnecessarily grouping that variable under a factor heading.
-    body_dt <- mutate(body_dt, suffix = ifelse(suffix == base, '', suffix))
-
-    if (in_tabler$theme$group_factors) {  # If factors are to be grouped
-      for_table_dt <- mutate(body_dt, base = ifelse(tblr_type == 'G', term, base)) %>%
-        mutate(term = ifelse(suffix == '', base, suffix)) %>%
-        mutate(term = ifelse(tblr_type == 'C' & key == 'sd', '', term)) %>%
-        select(-base, -suffix, -tblr_type, -row_num, -key)
-
-      last_coef_row <- filter(body_dt, tblr_type == 'C') %>%
-        filter(row_num == max(row_num)) %>%
-        pull(row_num)
-
-      names(for_table_dt) <- slice(header_dt, 1) %>%
-        unlist() %>%
-        unname()
-      ret_val <- knitr::kable(for_table_dt,
-                              caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
-                              format = this_format,
-                              align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
-                              booktabs = TRUE,
-                              escape = FALSE) %>%
-        kableExtra::row_spec(last_coef_row, hline_after = TRUE)
-
-      pack_detail <- get_pack_details(body_dt)
-      for (i in seq_along(pack_detail$base)) {
-        ret_val <- kableExtra::group_rows(ret_val,
-                                         group_label = paste0(pack_detail$base[[i]], ':'),
-                                         start_row = pack_detail$start[[i]],
-                                         end_row = pack_detail$end[[i]],
-                                         label_row_css = '',
-                                         colnum = 1L,
-                                         bold = FALSE)
-      }
-    } else { # Factors are not to be grouped}
-      ret_val <- select(ret_val, -base, -suffix, -tblr_type, -row_num, -key) %>%
-        knitr::kable(caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
-                     format = this_format,
-                     col.names = NULL,
-                     escape = FALSE)
-    }
-
-    for (i in seq_along(header_dt$base)) {
-      if (i > 1L) {  # Skip first header row (has already been added)
-        names_to_add <- slice(header_dt, i) %>%
-          unlist() %>%
-          unname()
-        vec_to_add <- rep(1L, times = length(names_to_add))
-        names(vec_to_add) <- names_to_add
-
-        ret_val <- add_header_above(ret_val,
-                                    vec_to_add,
-                                    line = FALSE,
-                                    bold = FALSE,
-                                    escape = FALSE)
-      }
-    }
-
-    # Check for errant text codes where multicolumn contains another multicolumn
-    ret_val[[1]] <- stringr::str_replace_all(ret_val[[1]],
-                                             'multicolumn\\{[0-9]\\}\\{[a-z]\\}\\{(multicolumn\\{[0-9]\\}\\{[:alpha:]\\}\\{[:alnum:]+\\})\\}',
-                                             '\\1')
-  }
-
-  #cat(ret_val, sep = '\n')
-  #invisible(in_tabler)
-  ret_val
+  tabler2kable(in_tabler)
 }
 
 tabler2kable <- function(tblr_obj, format = NULL) {
@@ -122,17 +21,17 @@ tabler2kable <- function(tblr_obj, format = NULL) {
       this_format <- tblr_obj$theme$style
   } else this_format <- format
 
-  out_dt <- purrr::map_df(strsplit(in_tabler$theme$order, '')[[1]],
+  out_dt <- purrr::map_df(strsplit(tblr_obj$theme$order, '')[[1]],
                           get_tblr_component,
-                          in_tabler = in_tabler,
+                          in_tabler = tblr_obj,
                           this_format) %>%
-    process_osa(in_tabler$osa, in_tabler$absorbed_vars) %>%
-    process_alias(in_tabler) %>%
+    process_osa(tblr_obj$osa, tblr_obj$absorbed_vars) %>%
+    process_alias(tblr_obj) %>%
     mutate(row_num = row_number())
 
   if (this_format == 'markdown')
     knitr::kable(out_dt,
-                 caption = if (is.na(in_tabler$title)) NULL else in_tabler$title,
+                 caption = if (is.na(tblr_obj$title)) NULL else tblr_obj$title,
                  format = this_format,
                  escape = FALSE) %>%
     return()
@@ -140,11 +39,8 @@ tabler2kable <- function(tblr_obj, format = NULL) {
   # The remainder of the function applies to HTML or LaTeX
   header_dt <- filter(out_dt, tblr_type %notin% c('C', 'G'))
   body_dt <- assemble_body_dt(out_dt)
-  last_coef_row <- filter(body_dt, tblr_type == 'C') %>%
-    filter(row_num == max(row_num)) %>%
-    pull(row_num)
 
-  if (in_tabler$theme$group_factors) {  # If factors are to be grouped
+  if (tblr_obj$theme$group_factors) {  # If factors are to be grouped
     for_table_dt <- mutate(body_dt, base = ifelse(tblr_type == 'G', term, base)) %>%
       mutate(term = ifelse(suffix == '', base, suffix)) %>%
       mutate(term = ifelse(tblr_type == 'C' & key == 'sd', '', term)) %>%
@@ -156,16 +52,38 @@ tabler2kable <- function(tblr_obj, format = NULL) {
   }
 
   knitr::kable(for_table_dt,
-               caption = if (is.na(tblr_obj$title)) NULL else tblr_obj$title,
+               #caption = if (is.na(tblr_obj$title)) NULL else tblr_obj$title,
                format = this_format,
                align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
                booktabs = TRUE,
                escape = FALSE,
                col.names = NULL) %>%
-    kableExtra::row_spec(last_coef_row, hline_after = TRUE) %>%
+    kableExtra::row_spec(get_last_coefficient_row(body_dt), hline_after = TRUE) %>%
     do_packing(pack_detail) %>%
     add_header_rows(header_dt) %>%
-    clean_errant_codes()
+    clean_errant_codes() %>%
+    add_midrule()
+
+}
+
+add_toprule <- function(in_kable) {
+  in_kable[[1]] <- stringr::str_replace(in_kable[[1]], '\\n', '\\n\\\\toprule\\n')
+  in_kable
+}
+
+add_midrule <- function(in_kable) {
+  #last_header_text <- dplyr::last(attr(in_kable, 'kable_meta')$new_header_row)
+  first_var <- paste0('\n', attr(in_kable, 'kable_meta')$rownames[1])
+
+  in_kable[[1]] <- stringr::str_replace(in_kable[[1]],
+                                        first_var,
+                                        paste0('\n\\\\midrule', first_var))
+  in_kable
+}
+get_last_coefficient_row <- function(body_dt) {
+  filter(body_dt, tblr_type == 'C') %>%
+    filter(row_num == max(row_num)) %>%
+    pull(row_num)
 }
 
 #' Check for Errant Codes
@@ -176,19 +94,19 @@ tabler2kable <- function(tblr_obj, format = NULL) {
 #' @importFrom stringr str_replace_all
 clean_errant_codes <- function(in_kable) {
   in_kable[[1]] <- stringr::str_replace_all(in_kable[[1]],
-                                            'multicolumn\\{[0-9]\\}\\{[a-z]\\}\\{(multicolumn\\{[0-9]\\}\\{[:alpha:]\\}\\{[:alnum:]+\\})\\}',
+                                            'multicolumn\\{[0-9]\\}\\{[lrc]\\}\\{(multicolumn\\{[0-9]\\}\\{[lrc]\\}\\{[^\\}]+\\})\\}',
                                             '\\1')
   in_kable
 }
 
-add_header_rows <- function(in_kable, data) {
-  if (is.null(data) | is.empty(data)) return(in_kable)
+add_header_rows <- function(in_kable, data = NULL) {
+  if (is.null(data) | is.null(data)) return(in_kable)
 
   header_dt <- arrange(data, -row_num) %>%
     select(-term, -suffix, -tblr_type, -row_num, -key)
 
-  k <- dim(data)[2]
-  for (i in seq_along(header_dt$base))
+  k <- attr(in_kable, 'kable_meta')$ncol
+  for (i in rev(seq_along(header_dt$base)))
     in_kable <- add_header_above(in_kable,
                                  setNames(rep(1L, times = k),
                                           unname(unlist(slice(header_dt, i)))),
