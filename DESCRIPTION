@@ -13,7 +13,6 @@ Imports:
   dplyr,
   tibble,
   tidyr,
-  magrittr,
   stringr
 Encoding:  UTF-8
 License: What license is it under?

@@ -4,9 +4,8 @@
 #' @examples
 #' print(in_table)
 #' @importFrom purrr map_df
-#' @importFrom dplyr filter arrange select mutate slice
+#' @importFrom dplyr filter arrange select mutate slice "%>%"
 #' @importFrom kableExtra pack_rows add_header_above kable
-#' @importFrom magrittr "%>%"
 #' @export
 print.tabler_object <- function(in_tabler) {
   tabler2kable(in_tabler)
@@ -140,8 +139,7 @@ assemble_body_dt <- function(data) {
     mutate(suffix = ifelse(suffix == base, '', suffix))
 }
 
-#' @importFrom dplyr filter group_by summarize arrange
-#' @importFrom magrittr "%>%"
+#' @importFrom dplyr filter group_by summarize arrange "%>%"
 get_pack_details <- function(in_table) {
   dplyr::filter(in_table, tblr_type == 'C' & suffix != '') %>%
     group_by(base) %>%
@@ -151,9 +149,8 @@ get_pack_details <- function(in_table) {
     arrange(start)
 }
 
-#' @importFrom dplyr union filter mutate pull bind_rows select starts_with summarize_all
+#' @importFrom dplyr union filter mutate pull bind_rows select starts_with summarize_all "%>%"
 #' @importFrom purrr map_df
-#' @importFrom magrittr "%>%"
 process_osa <- function(tbl_dt, osa_obj, abs_var) {
   # Remove rows corresponding to the omit list
   if (any(!is.na(osa_obj$omit))) {
@@ -328,9 +325,8 @@ add_suppressed_row <- function(row_dt, tbl_dt) {
 #' that factor variable was included in the estimation reported in each column.
 #' @param suppress_var Character scalar giving the name of a factor variable to be suppressed
 #' @param dt The tibble prepared to be printed
-#' @importFrom dplyr filter mutate
+#' @importFrom dplyr filter mutate "%>%"
 #' @importFrom purrr map_df
-#' @importFrom magrittr "%>%"
 suppress_compress <- function(suppress_var, dt) {
   filter(dt, tblr_type == 'C' & base == suppress_var) %>%
     purrr::map_df(~ if (all(.x == '')) '' else 'Y') %>%
@@ -587,9 +583,8 @@ list_first <- function(dt, ...) {
 #' each estimation.
 #' @importFrom tibble tibble
 #' @importFrom purrr map_df
-#' @importFrom dplyr mutate right_join
+#' @importFrom dplyr mutate right_join "%>%"
 #' @importFrom tidyr spread
-#' @importFrom magrittr "%>%"
 build_absorb_dt <- function(absorb_list) {
   f <- function(i, al) {
     if (is.null(al[[i]])) {
