@@ -4,9 +4,8 @@
 #' @examples
 #' print(in_table)
 #' @importFrom purrr map_df
-#' @importFrom knitr kable
 #' @importFrom dplyr filter arrange select mutate slice
-#' @importFrom kableExtra pack_rows add_header_above
+#' @importFrom kableExtra pack_rows add_header_above kable
 #' @importFrom magrittr "%>%"
 #' @export
 print.tabler_object <- function(in_tabler) {
@@ -30,7 +29,7 @@ tabler2kable <- function(tblr_obj, format = NULL) {
     mutate(row_num = row_number())
 
   if (this_format == 'markdown')
-    knitr::kable(out_dt,
+    kableExtra::kable(out_dt,
                  caption = if (is.na(tblr_obj$title)) NULL else tblr_obj$title,
                  format = this_format,
                  escape = FALSE) %>%
@@ -51,8 +50,9 @@ tabler2kable <- function(tblr_obj, format = NULL) {
     pack_detail <- NULL
   }
 
-  knitr::kable(for_table_dt,
-               #caption = if (is.na(tblr_obj$title)) NULL else tblr_obj$title,
+  my_caption <- if (is.na(tblr_obj$title)) NULL else tblr_obj$title
+  kableExtra::kable(for_table_dt,
+               caption = my_caption,
                format = this_format,
                align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
                booktabs = TRUE,
@@ -63,12 +63,6 @@ tabler2kable <- function(tblr_obj, format = NULL) {
     add_header_rows(header_dt) %>%
     clean_errant_codes() %>%
     add_midrule()
-
-}
-
-add_toprule <- function(in_kable) {
-  in_kable[[1]] <- stringr::str_replace(in_kable[[1]], '\\n', '\\n\\\\toprule\\n')
-  in_kable
 }
 
 add_midrule <- function(in_kable) {
@@ -105,7 +99,8 @@ add_header_rows <- function(in_kable, data = NULL) {
   header_dt <- arrange(data, -row_num) %>%
     select(-term, -suffix, -tblr_type, -row_num, -key)
 
-  k <- attr(in_kable, 'kable_meta')$ncol
+  #k <- attr(in_kable, 'kable_meta')$ncol
+  k <- dim(header_dt)[2]
   for (i in rev(seq_along(header_dt$base)))
     in_kable <- add_header_above(in_kable,
                                  setNames(rep(1L, times = k),
@@ -152,7 +147,7 @@ get_pack_details <- function(in_table) {
     group_by(base) %>%
     summarize(start = min(row_num),
               end = max(row_num)) %>%
-    filter(end > start) %>% # This will avoid single-variable factors
+    filter(end > start + 1L) %>% # This will avoid single-variable factors
     arrange(start)
 }
 
