@@ -365,15 +365,15 @@ get_tblr_component <- function(x, in_tabler, in_format) {
 #' can be found in tabler_object$theme$sig_level
 #' @importFrom dplyr mutate select arrange
 #' @importFrom tidyr gather spread
-coef_to_dt <- function(coef_dt, sig_levels) {
+coef_to_dt <- function(coef_dt, sig_levels, digits) {
   ret_val <- mutate(coef_dt, beta = sprintf('%s%s',
-                                 num(coef_dt$estimate, digits = 3L),
+                                 num(coef_dt$estimate, digits = digits[1L]),
                                  cut(coef_dt$p.value,
                                      breaks = c(-1, sig_levels, 1),
                                      labels = c(names(sig_levels), '')))) %>%
     mutate(sd = sprintf('(%s)', prettyNum(coef_dt$std.error,
                                           big.mark = ',',
-                                          digits = 2L))) %>%
+                                          digits = digits[2]))) %>%
     select(est_num, term, order, beta, sd) %>%
     gather(key, value, beta, sd) %>%
     arrange(order, est_num, key) %>%
@@ -441,7 +441,9 @@ name_interaction <- function(...) {
 
 #' @importFrom dplyr right_join mutate select
 output_coef_table <- function(tblr_obj) {
-  coefs <- coef_to_dt(tblr_obj$coef, tblr_obj$theme$sig_level)
+  coefs <- coef_to_dt(tblr_obj$coef,
+                      tblr_obj$theme$sig_level,
+                      tblr_obj$theme$digits)
   var_names <- order_coefs(tblr_obj$var_names, tblr_obj$xlevels)
 
   right_join(var_names, coefs, by = 'term') %>%
@@ -464,7 +466,7 @@ output_gofs_table <- function(tblr_obj) {
     mutate(column = sprintf('c_%i', column)) %>%
     tidyr::gather(key = 'key', value = 'value', -column) %>%
     right_join(order_dt, by = 'key') %>%
-    number2text() %>%
+    number2text(digits = tblr_obj$theme$digits) %>%
     tidyr::spread(key = 'column', value = 'value') %>%
     rename(term = long_name) %>%
     mutate(base = term, suffix = '') %>%
@@ -475,7 +477,7 @@ output_gofs_table <- function(tblr_obj) {
   list_first(ret_val, 'base', 'term', 'suffix', 'tblr_type')
 }
 
-number2text <- function(data) {
+number2text <- function(data, digits) {
   number_type <- group_by(data, key) %>%
     summarize(max_num = max(value)) %>%
     mutate(log_num = log10(abs(max_num))) %>%
@@ -483,9 +485,9 @@ number2text <- function(data) {
 
   left_join(data, number_type, by = 'key') %>%
     mutate(value = dplyr::case_when(
-      log_num < 0 ~ as.character(round(value, 3L)),
+      log_num < 0 ~ as.character(round(value, digits[1L])),
       log_num >= 3 ~ prettyNum(round(value, 0), big.mark = ',', ),
-      TRUE ~ prettyNum(value, digits = 3L)
+      TRUE ~ prettyNum(value, digits = digits[1L])
     )) %>%
     select(-log_num)
 }
