@@ -26,10 +26,11 @@ tabler2kable <- function(tblr_obj, format = NULL) {
     process_osa(tblr_obj$osa, tblr_obj$absorbed_vars) %>%
     process_alias(tblr_obj) %>%
     mutate(row_num = row_number())
+  my_caption <- if (is.na(tblr_obj$title)) NULL else tblr_obj$title
 
   if (this_format == 'markdown')
     kableExtra::kable(out_dt,
-                 caption = if (is.na(tblr_obj$title)) NULL else tblr_obj$title,
+                 caption = my_caption,
                  format = this_format,
                  escape = FALSE) %>%
     return()
@@ -49,30 +50,34 @@ tabler2kable <- function(tblr_obj, format = NULL) {
     pack_detail <- NULL
   }
 
-  my_caption <- if (is.na(tblr_obj$title)) NULL else tblr_obj$title
   kableExtra::kable(for_table_dt,
                caption = my_caption,
                format = this_format,
                align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
-               booktabs = TRUE,
+               booktabs = tblr_obj$theme$booktabs,
                escape = FALSE,
                col.names = NULL) %>%
     kableExtra::row_spec(get_last_coefficient_row(body_dt), hline_after = TRUE) %>%
     do_packing(pack_detail) %>%
     add_header_rows(header_dt) %>%
     clean_errant_codes() %>%
-    add_midrule()
+    add_midrule(tblr_obj$theme$booktabs)
 }
 
-add_midrule <- function(in_kable) {
+add_midrule <- function(in_kable, booktabs) {
   #last_header_text <- dplyr::last(attr(in_kable, 'kable_meta')$new_header_row)
   first_var <- paste0('\n', attr(in_kable, 'kable_meta')$rownames[1])
 
+  if (booktabs) {
+    paste_string <- '\n\\\\midrule'
+  } else paste_string <- '\n\\\\hline
+  '
   in_kable[[1]] <- stringr::str_replace(in_kable[[1]],
                                         first_var,
-                                        paste0('\n\\\\midrule', first_var))
+                                        paste0(paste_string, first_var))
   in_kable
 }
+
 get_last_coefficient_row <- function(body_dt) {
   filter(body_dt, tblr_type == 'C') %>%
     filter(row_num == max(row_num)) %>%
@@ -95,7 +100,7 @@ clean_errant_codes <- function(in_kable) {
 add_header_rows <- function(in_kable, data = NULL) {
   if (is.null(data) | is.null(data)) return(in_kable)
 
-  header_dt <- arrange(data, -row_num) %>%
+  header_dt <- arrange(data, row_num) %>%
     select(-term, -suffix, -tblr_type, -row_num, -key)
 
   #k <- attr(in_kable, 'kable_meta')$ncol
@@ -195,20 +200,6 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
       mutate(row_num = row_number()) %>%
       add_suppressed_row(row_dt = replacement_dt, .)
   }
-
-  # if (!is.na(osa_obj$alias)) {
-  #   for (i in seq_along(osa_obj$alias)) {
-  #     this_name <- names(osa_obj$alias)[i]
-  #     this_alias <- unname(osa_obj$alias)[i]
-  #
-  #     if (any(tbl_dt$base == this_name)) {
-  #       tbl_dt$base[tbl_dt$base == this_name] <- this_alias
-  #     }
-  #     if (any(tbl_dt$term == this_name)) {
-  #       tbl_dt$suffix[tbl_dt$term == this_name] <- this_alias
-  #     }
-  #   }
-  # }
 
   tbl_dt
 }
