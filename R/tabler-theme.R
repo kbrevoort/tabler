@@ -8,15 +8,11 @@
 #'
 #' @description Use this function to modify theme settings
 #' @usage tabler_theme(...)
-#' @param show_dep_var = TRUE
-#' @param show_method = TRUE
 #' @param digits = c(3,2)
 #' @param sig_levels = c('***' = 0.01, '**' = 0.05, '*' = 0.1)
 #' @return tablerTheme object
 #' @export
-tabler_theme <- function(show_dep_var = TRUE,
-                         show_method = TRUE,
-                         group_factors = TRUE,
+tabler_theme <- function(group_factors = TRUE,
                          digits = c(3,2),
                          sig_levels = c('***'=0.01, '**' = 0.05, '*' = 0.1),
                          style = 'markdown',
@@ -30,8 +26,6 @@ tabler_theme <- function(show_dep_var = TRUE,
 
   elements <- list()
   attr(elements, "class") <- "tabler_theme"
-  elements$show_dep_var <- show_dep_var
-  elements$show_method <- show_method
   elements$style <- style
   elements$col_number_style <- col_number_style
 
