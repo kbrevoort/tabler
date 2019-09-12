@@ -32,7 +32,7 @@ tabler2kable <- function(tblr_obj, format = NULL) {
     kableExtra::kable(out_dt,
                  caption = my_caption,
                  format = this_format,
-                 escape = FALSE) %>%
+                 escape = TRUE) %>%
     return()
 
   # The remainder of the function applies to HTML or LaTeX
@@ -55,7 +55,7 @@ tabler2kable <- function(tblr_obj, format = NULL) {
                format = this_format,
                align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
                booktabs = tblr_obj$theme$booktabs,
-               escape = FALSE,
+               escape = TRUE,
                col.names = NULL) %>%
     kableExtra::row_spec(get_last_coefficient_row(body_dt), hline_after = TRUE) %>%
     do_packing(pack_detail) %>%
@@ -92,8 +92,8 @@ get_last_coefficient_row <- function(body_dt) {
 #' @importFrom stringr str_replace_all
 clean_errant_codes <- function(in_kable) {
   in_kable[[1]] <- stringr::str_replace_all(in_kable[[1]],
-                                            'multicolumn\\{[0-9]\\}\\{[lrc]\\}\\{(multicolumn\\{[0-9]\\}\\{[lrc]\\}\\{[^\\}]+\\})\\}',
-                                            '\\1')
+                                            'multicolumn\\{[0-9]\\}\\{[lrc]\\}\\{\\\\textbackslash\\{\\}multicolumn\\\\\\{([0-9])\\\\\\}\\\\\\{([lrc])\\\\\\}\\\\\\{([^\\\\\\}]+)\\\\\\}',
+                                            'multicolumn{\\1}{\\2}{\\3')
   in_kable
 }
 
@@ -111,7 +111,7 @@ add_header_rows <- function(in_kable, data = NULL) {
                                           unname(unlist(slice(header_dt, i)))),
                                  line = FALSE,
                                  bold = FALSE,
-                                 escape = FALSE)
+                                 escape = TRUE)
 
   in_kable
 }
@@ -508,7 +508,7 @@ output_depvar_table <- function(tblr_obj, in_format) {
   my_dep_vars <- alias_column_names(tblr_obj$dep_vars, tblr_obj$osa$alias)
 
   start_df(my_dep_vars) %>%
-    mutate(base = text_spec('Dep. Variable:', align = 'r', escape = FALSE, format = in_format),
+    mutate(base = text_spec('Dep. Variable:', align = 'r', escape = TRUE, format = in_format),
            term = '',
            suffix = '',
            tblr_type = 'D') %>%
@@ -520,7 +520,7 @@ output_method_table <- function(tblr_obj, in_format) {
   my_est_types <- alias_column_names(tblr_obj$est_types, tblr_obj$osa$alias)
 
   start_df(my_est_types) %>%
-    mutate(base = text_spec('Method', align = 'r', escape = FALSE, format = in_format),
+    mutate(base = text_spec('Method', align = 'r', escape = TRUE, format = in_format),
            term = '',
            suffix = '',
            tblr_type = 'M') %>%
