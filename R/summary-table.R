@@ -8,12 +8,15 @@
 sum_tabler <- function(in_data,
                        func_list = list('mean', 'sd', 'min', 'max'),
                        na.rm = FALSE,
-                       ...) {
+                       omit = NULL,
+                       alias = NULL) {
   # in_data has to be a data frame
   if (!is.data.frame(in_data)) stop('Must supply a data.frame to sum_tabler')
 
   sum_table <- list()
   attr(sum_table, "class") <- "sum_tabler"
+
+  sum_table$osa <- create_osa(omit = omit, alias = alias)
 
   xlevels <- purrr::map(in_data, ~ if(is.factor(.x)) levels(.x) else NULL)
   xlevels <- xlevels[!vapply(xlevels, is.null, TRUE)]
