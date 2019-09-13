@@ -154,15 +154,20 @@ get_pack_details <- function(in_table) {
     arrange(start)
 }
 
+process_omit <- function(dt, omit_list) {
+  if (any(!is.na(omit_list))) {
+    dt <- dplyr::filter(dt,
+                        tblr_type != 'C' |
+                          (base %notin% omit_list & term %notin% omit_list))
+  }
+  dt
+}
+
 #' @importFrom dplyr union filter mutate pull bind_rows select starts_with summarize_all "%>%"
 #' @importFrom purrr map_df
 process_osa <- function(tbl_dt, osa_obj, abs_var) {
   # Remove rows corresponding to the omit list
-  if (any(!is.na(osa_obj$omit))) {
-    tbl_dt <- filter(tbl_dt,
-                     tblr_type != 'C' |
-                       (base %notin% osa_obj$omit & term %notin% osa_obj$omit))
-  }
+  tbl_dt <- process_omit(tbl_dt, osa_obj$omit)
 
   # If there are any absorbed variables, suppress existing coefficients (if
   # necessary) or add a table
