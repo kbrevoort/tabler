@@ -4,15 +4,15 @@
 \alias{sum_tabler}
 \title{Function to generate Latex table of summary statistics}
 \usage{
-sum_tabler(in_data, func_list = list(mean, sd, min, max),
-  drop_all_NA = FALSE, ...)
+sum_tabler(in_data, func_list = list("mean", "sd", "min", "max"),
+  na.rm = FALSE, ...)
 }
 \arguments{
 \item{in_data}{Data.frame to be summarized}
 
 \item{func_list}{List contaning function names as strings (default is list('mean', 'sd', 'min', 'max'))}
 
-\item{drop_all_NA}{Boolean indicating whether observations with missing values should be dropped (default = FALSE)}
+\item{na.rm}{Boolean indicating whether observations with missing values should be dropped (default = FALSE)}
 }
 \value{
 sum_tabler object

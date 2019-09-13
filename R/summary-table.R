@@ -2,12 +2,12 @@
 #'
 #' @param in_data Data.frame to be summarized
 #' @param func_list List contaning function names as strings (default is list('mean', 'sd', 'min', 'max'))
-#' @param drop_all_NA Boolean indicating whether observations with missing values should be dropped (default = FALSE)
+#' @param na.rm Boolean indicating whether observations with missing values should be dropped (default = FALSE)
 #' @return sum_tabler object
 #' @export
 sum_tabler <- function(in_data,
-                       func_list = list(mean, sd, min, max),
-                       drop_all_NA = FALSE,
+                       func_list = list('mean', 'sd', 'min', 'max'),
+                       na.rm = FALSE,
                        ...) {
   # in_data has to be a data frame
   if (!is.data.frame(in_data)) stop('Must supply a data.frame to sum_tabler')
@@ -15,23 +15,16 @@ sum_tabler <- function(in_data,
   sum_table <- list()
   attr(sum_table, "class") <- "sum_tabler"
 
-  sum_table$var_names <- names(in_data)
-  sum_table$xlevels <- list()
+  xlevels <- purrr::map(in_data, ~ if(is.factor(.x)) levels(.x) else NULL)
+  xlevels <- xlevels[!vapply(xlevels, is.null, TRUE)]
+  sum_table$xlevels <- xlevels
 
-  sum_table$xlevels <- purrr::map_if(in_data, is.factor, ~ levels(.x))
-
-  # If drop_all_NA == TRUE, we drop any observation that has at least one missing value
-  if(drop_all_NA) in_data <- na.omit(in_data)
-
-  # Loop over the variables in in_data, calling tblr_run on each one
-  by_var <- purrr::map(in_data, tblr_fun, func_list, ...)
-
-  # tblr_fun returns all row names with the name "in_vec".  This replaces that
-  # with the actual names of each variable.
-  for (i in seq_along(by_var)) {
-    rownames(by_var[[i]]) <- gsub("in_vec", names(by_var[i]), rownames(by_var[[i]]))
-  }
-  sum_table$values <- do.call(rbind, by_var)
+  sum_table$var_dt <- purrr::map_dfr(names(in_data),
+                                     summarize_variables,
+                                     data = in_data,
+                                     func_list = func_list,
+                                     na.rm = na.rm,
+                                     xlevels = xlevels)
 
   sum_table$title <- NA
   sum_table$notes <- NA
@@ -43,35 +36,66 @@ sum_tabler <- function(in_data,
   sum_table
 }
 
-#' This function runs a series of functions, in func_list, on a single variable, in_vec.
-tblr_fun <- function(x, func_list = NA, ...) {
-  a <- lapply(func_list, tblr_run, x)
-  ret_val <- do.call(cbind, a)
-  colnames(ret_val) <- unlist(func_list)
-  ret_val
-}
-
-#' Enhance Summary Table
+#' Summarize Variables
 #'
-#' @export
-`+.sum_tabler` <- function(sum_tabler, new_object) {
-  if (class(new_object) == "tabler_theme") {
-    sum_tabler$theme <- new_object
+#' Takes the name of a variable in the data.frame supplied to sum_tabler
+#' and calculates the summary statistics for that variable.
+#'
+#' This is an internal function.
+#' @param nm Character scalar of a variable name from the data.frame
+#' @param data Data.frame containing variable `nm`.
+#' @param func_list List of functions to use to evaluate variable expressed
+#' as a character vector
+#' @param na.rm Boolean indicating if NA values should be removed before running
+#' functions
+#' @param xlevels List with named vectors of factor levels
+#' @return A data.frame with the summary table rows for the variable
+summarize_variables <- function(nm, data, func_list, na.rm, xlevels) {
+  x <- data[[nm]]
+  if (is.factor(x)) {
+    if (nm %in% names(xlevels)) {
+      ret_val <- vector('list', length(xlevels[[nm]]))
+      for (i in 1:length(xlevels[[nm]])) {
+        my_level <- xlevels[[nm]][i]
+        ret_val[[i]] <- summarize_single_var(as.numeric(x == my_level),
+                                             func_list = func_list,
+                                             na.rm = na.rm) %>%
+          mutate(base = nm) %>%
+          mutate(suffix = my_level) %>%
+          list_first('base', 'suffix')
+      }
+      return(dplyr::bind_rows(ret_val))
+    }
+    stop('Factor variable not found among xlevels.')
+  } else {
+    summarize_single_var(x, func_list = func_list, na.rm = na.rm) %>%
+      mutate(base = nm, suffix = '') %>%
+      list_first('base', 'suffix')
   }
-
-  sum_tabler
 }
 
-#' This function runs a single function, f, on a vector of data, in_vec.
-#' This is used by tblr_fun.
-tblr_run <- function(f, in_vec) {
-  my_f <- NA
-  if (f == "n") {
-    my_f <- function(x) sum(1 - is.na(x))
-  } else {
-    my_f <- get(f, envir = .GlobalEnv)  # Get the function from the Global Environment
-    if (!is.function(my_f)) stop(paste0('Invalid function supplied to sum_tabler:  ', f))
-  }
+#' Summarize a Single Variable
+#'
+#' Implements the calculations from summarize_variables.
+#'
+#' This is an internal function.
+#' @param x A numeric vector
+#' @param func_list Character vector with names of functions to evaluate
+#' @param na.rm Boolean
+summarize_single_var <- function(x, func_list, na.rm) {
+  if (na.rm == TRUE)
+    x <- x[!is.na(x)]
 
-  apply(model.matrix(~ 0 + in_vec), 2, my_f)
+  purrr::map_dfc(func_list, run_single_function, x = x)
+}
+
+#' Run Single Function
+#'
+#' Take a single function name and apply it to x.
+run_single_function <- function(f_name, x) {
+  f <- get(f_name)
+  ret_dt <- data.frame(z = f(x))
+  names(ret_dt) <- f_name
+
+  ret_dt
 }

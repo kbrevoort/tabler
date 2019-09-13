@@ -4,7 +4,7 @@
 \alias{coef_to_dt}
 \title{Convert Coef Tibble to Output}
 \usage{
-coef_to_dt(coef_dt, sig_levels)
+coef_to_dt(coef_dt, sig_levels, digits)
 }
 \arguments{
 \item{coef_dt}{A data.frame of coefficient results from a tabler_object}
