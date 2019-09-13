@@ -22,6 +22,57 @@ print.sum_tabler <- function(in_tabler) {
   else print_latex_sum(in_tabler)
 }
 
+sumtabler2kable <- function(stbl_obj) {
+  my_dt <- stbl_obj$var_dt %>%
+    mutate(term = ifelse(suffix == '', base, paste0(base, suffix))) %>%
+    mutate(tblr_type = 'C') %>%
+    process_omit(stbl_obj$osa$omit) %>%
+    process_sum_alias(stbl_obj$osa$alias) %>%
+    mutate(row_num = row_number()) %>%
+    list_first('base', 'suffix', 'term', 'tblr_type', 'row_num')
+
+  pack_detail <- get_pack_details(my_dt)
+  names(my_dt) <- purrr::map_chr(names(my_dt),
+                                 process_header_alias,
+                                 alias_list = stbl_obj$osa$alias)
+
+  table_dt <- mutate(my_dt, suffix = ifelse(suffix == '', base, suffix)) %>%
+    select(-base, -term, -tblr_type, -row_num)
+
+  kableExtra::kable(table_dt,
+                    caption = stbl_obj$title,
+                    align = c('l', rep('c', dim(table_dt)[2] - 1L)),
+                    booktabs = stbl_obj$theme$booktabs,
+                    escape = TRUE) %>%
+    do_packing(pack_detail)
+}
+
+process_header_alias <- function(nm, alias_list) {
+  if (nm %in% c('base', 'suffix', 'term', 'tblr_type', 'row_num')) {
+    nm
+  } else if (nm %in% names(alias_list)) {
+    alias_list[[nm]]
+  } else nm
+}
+
+process_sum_alias <- function(dt, alias_list) {
+  if (any(!is.na(alias_list))) {
+    base_dt <- data.frame(base = names(alias_list),
+                          temp_base = unname(alias_list),
+                          stringsAsFactors = FALSE)
+    dt <- dplyr::left_join(dt, base_dt, by = 'base') %>%
+      mutate(base = ifelse(is.na(temp_base), base, temp_base)) %>%
+      select(-temp_base)
+
+    term_dt <- rename(base_dt, term = base)
+    dt <- dplyr::left_join(dt, term_dt, by = 'term') %>%
+      mutate(suffix = ifelse(is.na(temp_base), suffix, temp_base)) %>%
+      select(-temp_base)
+  }
+
+  dt
+}
+
 #' Prints the Summary Table in Latex
 print_latex_sum <- function(in_tabler) {
   if (!class(in_tabler) == "sum_tabler") stop("Must supply valid tablerObject to print")
