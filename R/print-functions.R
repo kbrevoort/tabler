@@ -29,15 +29,14 @@ sumtabler2kable <- function(stbl_obj) {
     mutate(row_num = row_number()) %>%
     list_first('base', 'suffix', 'term', 'tblr_type', 'row_num')
 
-  pack_detail <- get_pack_details(my_dt)
   names(my_dt) <- purrr::map_chr(names(my_dt),
                                  process_header_alias,
                                  alias_list = stbl_obj$osa$alias)
 
-  table_dt <- mutate(my_dt, suffix = ifelse(suffix == '', base, suffix)) %>%
-    select(-base, -term, -tblr_type, -row_num)
+  for_table_dt <- process_group_variables(my_dt, stbl_obj)
+  pack_detail <- get_pack_details(my_dt, stbl_obj)
 
-  kableExtra::kable(table_dt,
+  kableExtra::kable(for_table_dt,
                     caption = stbl_obj$title,
                     align = c('l', rep('c', dim(table_dt)[2] - 1L)),
                     booktabs = stbl_obj$theme$booktabs,

@@ -39,16 +39,8 @@ tabler2kable <- function(tblr_obj, format = NULL) {
   header_dt <- filter(out_dt, tblr_type %notin% c('C', 'G'))
   body_dt <- assemble_body_dt(out_dt)
 
-  if (tblr_obj$theme$group_factors) {  # If factors are to be grouped
-    for_table_dt <- mutate(body_dt, base = ifelse(tblr_type == 'G', term, base)) %>%
-      mutate(term = ifelse(suffix == '', base, suffix)) %>%
-      mutate(term = ifelse(tblr_type == 'C' & key == 'sd', '', term)) %>%
-      select(-base, -suffix, -tblr_type, -row_num, -key)
-    pack_detail <- get_pack_details(body_dt)
-  } else {
-    for_table_dt <- select(body_dt, -base, -suffix, -tblr_type, -row_num, -key)
-    pack_detail <- NULL
-  }
+  for_table_dt <- process_group_variables(body_dt, tblr_obj)
+  pack_detail <- get_pack_details(body_dt, tblr_obj)
 
   kableExtra::kable(for_table_dt,
                caption = my_caption,
@@ -145,7 +137,10 @@ assemble_body_dt <- function(data) {
 }
 
 #' @importFrom dplyr filter group_by summarize arrange "%>%"
-get_pack_details <- function(in_table) {
+get_pack_details <- function(in_table, tblr_obj) {
+  if (!tblr_obj$theme$group_factors)
+    return(NULL)
+
   dplyr::filter(in_table, tblr_type == 'C' & suffix != '') %>%
     group_by(base) %>%
     summarize(start = min(row_num),
@@ -582,4 +577,20 @@ build_absorb_dt <- function(absorb_list) {
            tblr_type = 'C',
            key = 'beta') %>%
     list_first('base', 'term', 'suffix', 'tblr_type')
+}
+
+process_group_variables <- function(dt, tblr_obj) {
+  if (!'key' %in% names(dt))  # Necessary for sum_tabler objects
+    dt <- mutate(dt, key = 'beta')
+
+  if (tblr_obj$theme$group_factors) {  # If factors are to be grouped
+    ret_val <- mutate(dt, base = ifelse(tblr_type == 'G', term, base)) %>%
+      mutate(term = ifelse(suffix == '', base, suffix)) %>%
+      mutate(term = ifelse(tblr_type == 'C' & key == 'sd', '', term)) %>%
+      select(-base, -suffix, -tblr_type, -row_num, -key)
+  } else {
+    ret_val <- select(body_dt, -base, -suffix, -tblr_type, -row_num, -key)
+  }
+
+  ret_val
 }
