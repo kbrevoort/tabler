@@ -222,13 +222,12 @@ process_tabler_alias <- function(tbl_dt, tbl_obj) {
     summarize(lowest = min(row_num),
               highest = max(row_num))
 
-  tbl_dt <- bind_rows(filter(tbl_dt, row_num < spot_dt$lowest),
-                      new_dt,
-                      filter(tbl_dt, row_num > spot_dt$highest))
+  bind_rows(filter(tbl_dt, row_num < spot_dt$lowest),
+            new_dt,
+            filter(tbl_dt, row_num > spot_dt$highest)) %>%
+    select(-row_num)
 }
 
-select(tbl_dt, -row_num)
-}
 
 #' @importFrom dplyr bind_cols mutate select pull
 suffix_to_alias <- function(suf, a) {

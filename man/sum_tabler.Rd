@@ -5,7 +5,7 @@
 \title{Function to generate Latex table of summary statistics}
 \usage{
 sum_tabler(in_data, func_list = list("mean", "sd", "min", "max"),
-  na.rm = FALSE, ...)
+  na.rm = FALSE, omit = NULL, alias = NULL)
 }
 \arguments{
 \item{in_data}{Data.frame to be summarized}
