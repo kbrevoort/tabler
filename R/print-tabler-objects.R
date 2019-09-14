@@ -24,7 +24,7 @@ tabler2kable <- function(tblr_obj, format = NULL) {
                           in_tabler = tblr_obj,
                           this_format) %>%
     process_osa(tblr_obj$osa, tblr_obj$absorbed_vars) %>%
-    process_alias(tblr_obj) %>%
+    process_tabler_alias(tblr_obj) %>%
     mutate(row_num = row_number())
   my_caption <- if (is.na(tblr_obj$title)) NULL else tblr_obj$title
 
@@ -209,50 +209,25 @@ process_osa <- function(tbl_dt, osa_obj, abs_var) {
   tbl_dt
 }
 
-#' Process Alias
+#' Process Tabler Alias
 #'
 #'
-process_alias <- function(tbl_dt, tbl_obj) {
+process_tabler_alias <- function(tbl_dt, tbl_obj) {
   tbl_dt <- mutate(tbl_dt, row_num = row_number())
 
-  if (any(!is.na(tbl_obj$osa$alias))) {
-    coef_dt <- filter(tbl_dt, tblr_type == 'C') %>%
-      mutate(row_num = row_number())
+  new_dt <- process_alias(tbl_dt, tbl_obj)
 
-    alias_dt <- tibble::tibble(var = names(tbl_obj$osa$alias),
-                               alias = tbl_obj$osa$alias)
+  # Replace the coefficient data.frame in tbl_dt
+  spot_dt <- filter(tbl_dt, tblr_type == 'C') %>%
+    summarize(lowest = min(row_num),
+              highest = max(row_num))
 
-    base_dt <- expand_interaction_to_dt(coef_dt$base) %>%
-      left_join(alias_dt, by = 'var') %>%
-      mutate(alias = ifelse(is.na(alias), var, alias)) %>%
-      select(row_num, alias) %>%
-      compress_interaction_dt() %>%
-      rename(base_alias = alias)
+  tbl_dt <- bind_rows(filter(tbl_dt, row_num < spot_dt$lowest),
+                      new_dt,
+                      filter(tbl_dt, row_num > spot_dt$highest))
+}
 
-    term_dt <- expand_interaction_to_dt(coef_dt$term) %>%
-      left_join(alias_dt, by = 'var') %>%
-      mutate(alias = ifelse(is.na(alias), '', alias)) %>%
-      select(row_num, alias) %>%
-      compress_interaction_dt() %>%
-      rename(term_alias = alias)
-
-    new_dt <- left_join(coef_dt, base_dt, by = 'row_num') %>%
-      left_join(term_dt, by = 'row_num') %>%
-      mutate(base = base_alias) %>%
-      mutate(suffix = suffix_to_alias(suffix, term_alias)) %>%
-      select(-row_num, -base_alias, -term_alias) %>%
-      list_first('base', 'term', 'suffix', 'tblr_type')
-
-    spot_dt <- filter(tbl_dt, tblr_type == 'C') %>%
-      summarize(lowest = min(row_num),
-                highest = max(row_num))
-
-    tbl_dt <- bind_rows(filter(tbl_dt, row_num < spot_dt$lowest),
-              new_dt,
-              filter(tbl_dt, row_num > spot_dt$highest))
-  }
-
-  select(tbl_dt, -row_num)
+select(tbl_dt, -row_num)
 }
 
 #' @importFrom dplyr bind_cols mutate select pull
