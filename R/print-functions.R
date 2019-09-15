@@ -33,12 +33,14 @@ sumtabler2kable <- function(stbl_obj) {
                                  process_header_alias,
                                  alias_list = stbl_obj$osa$alias)
 
-  for_table_dt <- process_group_variables(my_dt, stbl_obj)
+  for_table_dt <- process_group_variables(my_dt, stbl_obj) %>%
+    purrr::map_dfc(~ if (is.numeric(.x)) num(.x, digits = stbl_obj$theme$digits[1L]) else .x)
+
   pack_detail <- get_pack_details(my_dt, stbl_obj)
 
   kableExtra::kable(for_table_dt,
                     caption = stbl_obj$title,
-                    align = c('l', rep('c', dim(table_dt)[2] - 1L)),
+                    align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
                     booktabs = stbl_obj$theme$booktabs,
                     escape = TRUE) %>%
     do_packing(pack_detail)
