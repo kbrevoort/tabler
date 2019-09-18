@@ -2,20 +2,7 @@
 % Please edit documentation in R/print-functions.R
 \name{print.sum_tabler}
 \alias{print.sum_tabler}
-\title{#' Print Method for Tabler Object
-#'
-#' @param in_table Tabler Object
-#' @examples
-#' print(in_table)
-#' @export
-print.tabler_object <- function(in_tabler) {
-  if (in_tabler$theme$style == 'markdown') {
-    print_latex(in_tabler)
-  } else if (in_tabler$theme$style == 'latex') {
-    print_latex(in_tabler)
-  } else print_html(in_tabler)
-}
-Print a Summary Table.}
+\title{Print a Summary Table.}
 \usage{
 \method{print}{sum_tabler}(in_tabler)
 }
