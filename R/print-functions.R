@@ -1,16 +1,3 @@
-#' #' Print Method for Tabler Object
-#' #'
-#' #' @param in_table Tabler Object
-#' #' @examples
-#' #' print(in_table)
-#' #' @export
-#' print.tabler_object <- function(in_tabler) {
-#'   if (in_tabler$theme$style == 'markdown') {
-#'     print_latex(in_tabler)
-#'   } else if (in_tabler$theme$style == 'latex') {
-#'     print_latex(in_tabler)
-#'   } else print_html(in_tabler)
-#' }
 
 #' Print a Summary Table.
 #'
@@ -20,7 +7,19 @@ print.sum_tabler <- function(in_tabler) {
   sumtabler2kable(in_tabler)
 }
 
-sumtabler2kable <- function(stbl_obj) {
+#' Sum Tabler To Kable
+#'
+#' Take a `sum_tabler` object and convert it into a kable.
+#' @param stbl_obj A sum_tabler object
+#' @param format Character vector providing the format of the table to be
+#' generated (default = NULL)
+#' @return A kable object, modified by kableExtra
+#' @importFrom magrittr "%>%"
+#' @importFrom dplyr mutate
+#' @importFrom purrr map_chr map_dfc
+#' @importFrom kableExtra kable
+#' @export
+sumtabler2kable <- function(stbl_obj, format = NULL) {
   my_dt <- stbl_obj$var_dt %>%
     mutate(term = ifelse(suffix == '', base, paste0(base, suffix))) %>%
     mutate(tblr_type = 'C') %>%
@@ -42,7 +41,8 @@ sumtabler2kable <- function(stbl_obj) {
                     caption = stbl_obj$title,
                     align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
                     booktabs = stbl_obj$theme$booktabs,
-                    escape = TRUE) %>%
+                    escape = TRUE,
+                    format = format) %>%
     do_packing(pack_detail)
 }
 
