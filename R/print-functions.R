@@ -35,6 +35,9 @@ sumtabler2kable <- function(stbl_obj, format = NULL) {
   for_table_dt <- process_group_variables(my_dt, stbl_obj) %>%
     purrr::map_dfc(~ if (is.numeric(.x)) num(.x, digits = stbl_obj$theme$digits[1L]) else .x)
 
+  all_names <- names(for_table_dt)
+  names(for_table_dt)[all_names == 'term'] <- '   '
+
   pack_detail <- get_pack_details(my_dt, stbl_obj)
 
   kableExtra::kable(for_table_dt,

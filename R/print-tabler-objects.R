@@ -11,6 +11,16 @@ print.tabler_object <- function(in_tabler) {
   tabler2kable(in_tabler)
 }
 
+#' Tabler To Kable
+#'
+#' Convert a tabler object into a knitr::kable object.
+#' @param tblr_obj A tabler object
+#' @param format Character scalar indicating the format to use for the kable
+#' (default is NULL)
+#' @importFrom purrr map_df
+#' @importFrom dplyr mutate filter
+#' @importFrom kableExtra kable row_spec
+#' @export
 tabler2kable <- function(tblr_obj, format = NULL) {
   # Establish the format
   if (is.null(format)) {
