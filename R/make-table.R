@@ -152,6 +152,10 @@ is_tabler_column <- function(x) {
   any(class(x) == 'tabler_column')
 }
 
+is_tabler <- function(x) {
+  any(class(x) == 'tabler_object')
+}
+
 #' Combine xlevels
 #'
 #' This function takes a series of tabler_column objects and combines the xlevels
@@ -177,4 +181,19 @@ combine_xlevels <- function(cols) {
   }
 
   ret_val
+}
+
+#' Add Caption
+#'
+#' Adds caption to an existing tabler object or sum_tabler object..
+#' @param tblr_obj A valid tabler object
+#' @param title A character scalar with the new title to use
+#' @return A tabler object with the new caption as a title
+#' @export
+add_caption <- function(tblr_obj, title = NA_character_) {
+  if (!(is_tabler(tblr_obj) | is_sumtabler(tblr_obj)))
+    stop('Must supply a valid tabler object to add_caption.')
+
+  tblr_obj$title <- title
+  tblr_obj
 }

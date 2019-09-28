@@ -43,12 +43,12 @@ tabler2kable <- function(tblr_obj, format = NULL) {
   pack_detail <- get_pack_details(body_dt, tblr_obj)
 
   kableExtra::kable(for_table_dt,
-               caption = my_caption,
-               format = this_format,
-               align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
-               booktabs = tblr_obj$theme$booktabs,
-               escape = TRUE,
-               col.names = NULL) %>%
+                    caption = my_caption,
+                    format = this_format,
+                    align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
+                    booktabs = tblr_obj$theme$booktabs,
+                    escape = TRUE,
+                    col.names = NULL) %>%
     kableExtra::row_spec(get_last_coefficient_row(body_dt), hline_after = TRUE) %>%
     do_packing(pack_detail) %>%
     add_header_rows(header_dt) %>%

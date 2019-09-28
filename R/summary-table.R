@@ -29,7 +29,7 @@ sum_tabler <- function(in_data,
                                      na.rm = na.rm,
                                      xlevels = xlevels)
 
-  sum_table$title <- NA
+  sum_table$title <- ''
   sum_table$notes <- NA
   sum_table$number <- NA
   sum_table$latex_label <- NA
@@ -37,6 +37,10 @@ sum_tabler <- function(in_data,
   sum_table$theme <- tabler_theme()
 
   sum_table
+}
+
+is_sumtabler <- function(x) {
+  any(class(x) == 'sum_tabler')
 }
 
 #' Summarize Variables
