@@ -98,7 +98,9 @@ get_last_coefficient_row <- function(body_dt) {
 clean_errant_codes <- function(in_kable) {
   in_kable[[1]] <- stringr::str_replace_all(in_kable[[1]],
                                             'multicolumn\\{[0-9]\\}\\{[lrc]\\}\\{\\\\textbackslash\\{\\}multicolumn\\\\\\{([0-9])\\\\\\}\\\\\\{([lrc])\\\\\\}\\\\\\{([^\\\\\\}]+)\\\\\\}',
-                                            'multicolumn{\\1}{\\2}{\\3')
+                                            'multicolumn{\\1}{\\2}{\\3') %>%
+    stringr::str_replace_all('R\\\\textasciicircum\\{\\}2',
+                             '$R^2$')
   in_kable
 }
 

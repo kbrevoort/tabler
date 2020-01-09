@@ -13,8 +13,8 @@ tabler <- function(...,
                    suppress = NA_character_,
                    omit = NA_character_,
                    gof_list = c(N = 'N',
-                                r.squared = 'R-squared',
-                                adj.r.squared = 'Adj. R-squared')) {
+                                r.squared = 'R^2',
+                                adj.r.squared = 'Adj. R^2')) {
   in_cols <- list(...)
 
   # Allow for a list of results to be supplied.
