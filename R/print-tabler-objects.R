@@ -57,9 +57,12 @@ tabler2kable <- function(tblr_obj, format = NULL) {
                     format = this_format,
                     align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
                     booktabs = tblr_obj$theme$booktabs,
+                    linesep = if (tblr_obj$theme$booktabs) '' else '\\hline',
                     escape = TRUE,
                     col.names = NULL) %>%
-    kableExtra::row_spec(get_last_coefficient_row(body_dt), hline_after = TRUE) %>%
+    kableExtra::row_spec(get_last_coefficient_row(body_dt),
+                         hline_after = TRUE,
+                         extra_latex_after = '\\addlinespace[0.5em]') %>%
     do_packing(pack_detail) %>%
     add_header_rows(header_dt) %>%
     clean_errant_codes() %>%
@@ -71,9 +74,9 @@ add_midrule <- function(in_kable, booktabs) {
   first_var <- paste0('\n', attr(in_kable, 'kable_meta')$rownames[1])
 
   if (booktabs) {
-    paste_string <- '\n\\\\midrule'
-  } else paste_string <- '\n\\\\hline
-  '
+    paste_string <- '\n\\\\midrule \\\\addlinespace[0.5em]'
+  } else paste_string <- '\n\\\\hline \\\\addlinespace[0.5em]'
+
   in_kable[[1]] <- stringr::str_replace(in_kable[[1]],
                                         first_var,
                                         paste0(paste_string, first_var))
@@ -504,7 +507,7 @@ output_method_table <- function(tblr_obj, in_format) {
   my_est_types <- alias_column_names(tblr_obj$est_types, tblr_obj$osa$alias)
 
   start_df(my_est_types) %>%
-    mutate(base = text_spec('Method', align = 'r', escape = TRUE, format = in_format),
+    mutate(base = text_spec('Method:', align = 'r', escape = TRUE, format = in_format),
            term = '',
            suffix = '',
            tblr_type = 'M') %>%
