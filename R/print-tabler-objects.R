@@ -63,15 +63,16 @@ tabler2kable <- function(tblr_obj, format = NULL) {
     kableExtra::row_spec(get_last_coefficient_row(body_dt),
                          hline_after = TRUE,
                          extra_latex_after = '\\addlinespace[0.5em]') %>%
+    add_midrule(tblr_obj$theme$booktabs) %>%
     do_packing(pack_detail) %>%
     add_header_rows(header_dt) %>%
-    clean_errant_codes() %>%
-    add_midrule(tblr_obj$theme$booktabs)
+    clean_errant_codes()
 }
 
 add_midrule <- function(in_kable, booktabs) {
   #last_header_text <- dplyr::last(attr(in_kable, 'kable_meta')$new_header_row)
-  first_var <- paste0('\n', attr(in_kable, 'kable_meta')$rownames[1])
+  #first_var <- paste0('\n', attr(in_kable, 'kable_meta')$rownames[1])
+  first_var <- attr(in_kable, 'kable_meta')$contents[[1]]
 
   if (booktabs) {
     paste_string <- '\n\\\\midrule \\\\addlinespace[0.5em]'
