@@ -74,8 +74,8 @@ process_alias <- function(dt, tblr_obj) {
   coef_dt <- filter(dt, tblr_type == 'C') %>%
     mutate(row_num = row_number())
 
-  alias_dt <- tibble::tibble(var = names(tblr_obj$osa$alias),
-                             alias = tblr_obj$osa$alias)
+  alias_dt <- tibble::tibble(var = c('(Intercept)', names(tblr_obj$osa$alias)),
+                             alias = c('Constant', tblr_obj$osa$alias))
 
   base_dt <- expand_interaction_to_dt(coef_dt$base) %>%
     left_join(alias_dt, by = 'var') %>%

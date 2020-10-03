@@ -52,7 +52,10 @@ make_column.felm <- function(in_result) {
   # factor variables as well.
   fe_xlevels <- purrr::map(names(in_result$fe), ~ levels(in_result$fe[[.x]]))
   names(fe_xlevels) <- names(in_result$fe)
-  fct_xlevels <- build_felm_factor_levels(setdiff(names(coef(in_result)), var_names), var_names)
+  est_var_names <- names(coef(in_result))
+  unaccounted_vars <- setdiff(est_var_names, c(var_names, '(Intercept)'))  # Coefficient names that are not variables
+  left_to_match <- setdiff(var_names, est_var_names)
+  fct_xlevels <- build_felm_factor_levels(unaccounted_vars, left_to_match)
   col_obj$xlevels <- c(fe_xlevels, fct_xlevels)
 
   col_obj$absorbed_vars <- names(in_result$fe)
@@ -64,7 +67,7 @@ make_column.felm <- function(in_result) {
   gof$dep_var_mean <- mean(in_result$response)
   col_obj$gof <- gof
 
-  col_obj <- check_for_logicals(col_obj)
+  #col_obj <- check_for_logicals(col_obj)
   col_obj
 }
 

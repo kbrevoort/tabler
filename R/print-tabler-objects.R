@@ -18,7 +18,7 @@ print.tabler_object <- function(in_tabler) {
 #' @param format Character scalar indicating the format to use for the kable
 #' (default is NULL)
 #' @importFrom purrr map_df
-#' @importFrom dplyr mutate filter
+#' @importFrom dplyr mutate filter row_number
 #' @importFrom kableExtra kable row_spec
 #' @export
 tabler2kable <- function(tblr_obj, format = NULL) {
@@ -29,54 +29,35 @@ tabler2kable <- function(tblr_obj, format = NULL) {
       this_format <- tblr_obj$theme$style
   } else this_format <- format
 
-  out_dt <- purrr::map_df(strsplit(tblr_obj$theme$order, '')[[1]],
-                          get_tblr_component,
-                          in_tabler = tblr_obj,
-                          this_format) %>%
-    process_osa(tblr_obj$osa, tblr_obj$absorbed_vars) %>%
-    process_tabler_alias(tblr_obj) %>%
-    mutate(row_num = row_number())
-  my_caption <- if (is.na(tblr_obj$title)) NULL else tblr_obj$title
+  if (this_format == 'markdown') {
+    ret_kable <- kableExtra::kable(reformat_tabler_obj(tblr_obj),
+                                   caption = extract_caption(tblr_obj),
+                                   format = this_format,
+                                   escape = TRUE)
+  } else if (this_format == 'latex') {
+    ret_kable <- export_kable_latex(tblr_obj)
+  } else if (this_format == 'html') {
+    ret_kable <- export_kable_html(tblr_obj)
+  } else stop('Unknown format supplied to tabler2kable')
 
-  if (this_format == 'markdown')
-    kableExtra::kable(out_dt,
-                 caption = my_caption,
-                 format = this_format,
-                 escape = TRUE) %>%
-    return()
+  ret_kable
+}
 
-  # The remainder of the function applies to HTML or LaTeX
-  header_dt <- filter(out_dt, tblr_type %notin% c('C', 'G'))
-  body_dt <- assemble_body_dt(out_dt)
-
-  for_table_dt <- process_group_variables(body_dt, tblr_obj)
-  pack_detail <- get_pack_details(body_dt, tblr_obj)
-
-  kableExtra::kable(for_table_dt,
-                    caption = my_caption,
-                    format = this_format,
-                    align = c('l', rep('c', dim(for_table_dt)[2] - 1L)),
-                    booktabs = tblr_obj$theme$booktabs,
-                    linesep = if (tblr_obj$theme$booktabs) '' else '\\hline',
-                    escape = TRUE,
-                    col.names = NULL) %>%
-    kableExtra::row_spec(get_last_coefficient_row(body_dt),
-                         hline_after = TRUE,
-                         extra_latex_after = '\\addlinespace[0.5em]') %>%
-    add_midrule(tblr_obj$theme$booktabs) %>%
-    do_packing(pack_detail) %>%
-    add_header_rows(header_dt) %>%
-    clean_errant_codes()
+extract_caption <- function(tblr_obj) {
+  if (is.na(tblr_obj$title)) NULL else tblr_obj$title
 }
 
 add_midrule <- function(in_kable, booktabs) {
+  if (attr(in_kable, 'format') == 'html')
+    return(in_kable)
+
   #last_header_text <- dplyr::last(attr(in_kable, 'kable_meta')$new_header_row)
   #first_var <- paste0('\n', attr(in_kable, 'kable_meta')$rownames[1])
   first_var <- attr(in_kable, 'kable_meta')$contents[[1]]
 
   if (booktabs) {
-    paste_string <- '\n\\\\midrule \\\\addlinespace[0.5em]'
-  } else paste_string <- '\n\\\\hline \\\\addlinespace[0.5em]'
+    paste_string <- '\n\\\\midrule \\\\addlinespace[0.5em]\n'
+  } else paste_string <- '\n\\\\hline \\\\addlinespace[0.5em]\n'
 
   in_kable[[1]] <- stringr::str_replace(in_kable[[1]],
                                         first_var,
@@ -124,7 +105,10 @@ add_header_rows <- function(in_kable, data = NULL) {
   in_kable
 }
 
-do_packing <- function(in_kable, data) {
+do_packing <- function(in_kable, tblr_obj) {
+  data <- get_pack_details(assemble_body_dt(tblr_obj),
+                           tblr_obj)
+
   if (is.null(data)) return(in_kable)
 
   for (i in seq_along(data$base)) {
@@ -139,8 +123,10 @@ do_packing <- function(in_kable, data) {
   in_kable
 }
 
-assemble_body_dt <- function(data) {
-  filter(data, tblr_type %in% c('C', 'G')) %>%
+assemble_body_dt <- function(tblr_obj) {
+  tblr_obj %>%
+    reformat_tabler_obj() %>%
+    filter(tblr_type %in% c('C', 'G')) %>%
     mutate(row_num = row_num - min(row_num) + 1) %>% # restart row number at 1
     # Handle logical variables
     mutate(base = ifelse(suffix %in% c("TRUE", "FALSE"),
@@ -428,7 +414,9 @@ output_coef_table <- function(tblr_obj) {
   var_names <- order_coefs(tblr_obj$var_names, tblr_obj$xlevels)
 
   right_join(var_names, coefs, by = 'term') %>%
-    mutate(term = ifelse(base == term, '', term)) %>%
+    mutate(term = ifelse(base == term & !is.na(base), '', term)) %>%
+    mutate(base = ifelse(is.na(base), term, base),
+           suffix = ifelse(is.na(suffix), '', suffix)) %>%
     mutate(tblr_type = 'C') %>%
     select(-order) %>%
     list_first('base', 'term', 'suffix', 'tblr_type')
