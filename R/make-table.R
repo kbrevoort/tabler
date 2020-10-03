@@ -19,7 +19,7 @@ tabler <- function(...,
 
   # Allow for a list of results to be supplied.
   if (length(in_cols) == 1L) {
-    if (class(in_cols) == 'list') {
+    if (class(in_cols[[1]]) == 'list') {  # A List of lists has been supplied, get rid of outer list
       in_cols <- in_cols[[1]]
     }
   }
