@@ -1,7 +1,7 @@
 Package: tabler
 Type: Package
 Title: Produce Coefficient Tables in R
-Version: 0.0.0.9000
+Version: 0.0.98.001
 Date: 2015-07-17
 Author: Kenneth Brevoort
 Maintainer: Kenneth Brevoort <ken@brevoort.com>
