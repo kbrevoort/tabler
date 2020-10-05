@@ -38,7 +38,7 @@ sumtabler2kable <- function(stbl_obj, format = NULL) {
   all_names <- names(for_table_dt)
   names(for_table_dt)[all_names == 'term'] <- '   '
 
-  pack_detail <- get_pack_details(my_dt, stbl_obj)
+  #pack_detail <- get_pack_details(my_dt, stbl_obj)
 
   kableExtra::kable(for_table_dt,
                     caption = stbl_obj$title,
@@ -46,7 +46,7 @@ sumtabler2kable <- function(stbl_obj, format = NULL) {
                     booktabs = stbl_obj$theme$booktabs,
                     escape = TRUE,
                     format = format) %>%
-    do_packing(pack_detail)
+    do_packing(stbl_obj)
 }
 
 #' Process Header Alias
