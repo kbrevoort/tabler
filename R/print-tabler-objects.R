@@ -44,6 +44,11 @@ tabler2kable <- function(tblr_obj, format = NULL) {
 }
 
 extract_caption <- function(tblr_obj) {
+  my_title <- tblr_obj$title
+
+  if (length(my_title) > 1)
+    stop('Multiple titles supplied to tabler object.')
+
   if (is.na(tblr_obj$title)) NULL else tblr_obj$title
 }
 
@@ -210,7 +215,7 @@ process_tabler_alias <- function(tbl_dt, tbl_obj) {
   tbl_dt <- mutate(tbl_dt, row_num = row_number())
 
   new_dt <- process_alias(tbl_dt, tbl_obj)
-  if (is.na(new_dt))
+  if (all(is.na(new_dt)))
     return(select(tbl_dt, -row_num))
 
   # Replace the coefficient data.frame in tbl_dt
