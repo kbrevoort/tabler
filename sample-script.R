@@ -1,4 +1,5 @@
 library(lfe)
+devtools::load_all('.')
 
 x1 <- runif(1000,0,5)
 x2 <- factor( sample.int(3,size=1000,replace=TRUE) )
@@ -23,6 +24,5 @@ col2 <- make_column(myResult2)
 col3 <- make_column(myResult3)
 col4 <- make_column(myResult4)
 
-tabler(col1) %>% print.latex()
 tblr_obj <- tabler(col1,col2, col3, col4)
-print.latex(temp, rename=c('x2'='income'))
+tabler2kable(tblr_obj, format = 'html')
