@@ -69,7 +69,7 @@ process_header_alias <- function(nm, alias_list) {
 
 process_alias <- function(dt, tblr_obj) {
   if (all(is.na(tblr_obj$osa$alias)))
-    return(dt)
+    return(NA)
 
   coef_dt <- filter(dt, tblr_type == 'C') %>%
     mutate(row_num = row_number())

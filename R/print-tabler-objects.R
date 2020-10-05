@@ -213,6 +213,8 @@ process_tabler_alias <- function(tbl_dt, tbl_obj) {
   tbl_dt <- mutate(tbl_dt, row_num = row_number())
 
   new_dt <- process_alias(tbl_dt, tbl_obj)
+  if (is.na(new_dt))
+    return(select(tbl_dt, -row_num))
 
   # Replace the coefficient data.frame in tbl_dt
   spot_dt <- filter(tbl_dt, tblr_type == 'C') %>%
