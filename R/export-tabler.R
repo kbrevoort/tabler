@@ -3,6 +3,9 @@ export_kable_html <- function(tblr_obj) {
   body_dt <- assemble_body_dt(tblr_obj)
   for_table_dt <- process_group_variables(body_dt, tblr_obj)
 
+  pack_details <- get_pack_details(assemble_body_dt(tblr_obj),
+                                   tblr_obj)
+
   kableExtra::kable(for_table_dt,
                     caption = extract_caption(tblr_obj),
                     format = 'html',
@@ -11,7 +14,7 @@ export_kable_html <- function(tblr_obj) {
                     escape = TRUE,
                     col.names = names(for_table_dt)) %>%
     add_lines_to_html_table(tblr_obj) %>%
-    do_packing(tblr_obj)
+    do_packing(pack_details)
 
 }
 
@@ -25,6 +28,9 @@ export_kable_latex <- function(tblr_obj) {
 
   for_table_dt <- process_group_variables(body_dt, tblr_obj)
 
+  pack_details <- get_pack_details(assemble_body_dt(tblr_obj),
+                                   tblr_obj)
+
   kableExtra::kable(for_table_dt,
                     caption = extract_caption(tblr_obj),
                     format = 'latex',
@@ -37,7 +43,7 @@ export_kable_latex <- function(tblr_obj) {
                          hline_after = TRUE,
                          extra_latex_after = '\\addlinespace[0.5em]') %>%
     add_midrule(tblr_obj$theme$booktabs) %>%
-    do_packing(tblr_obj) %>%
+    do_packing(pack_details) %>%
     add_header_rows(header_dt) %>%
     clean_errant_codes()
 

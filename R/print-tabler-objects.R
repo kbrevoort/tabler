@@ -105,17 +105,14 @@ add_header_rows <- function(in_kable, data = NULL) {
   in_kable
 }
 
-do_packing <- function(in_kable, tblr_obj) {
-  data <- get_pack_details(assemble_body_dt(tblr_obj),
-                           tblr_obj)
+do_packing <- function(in_kable, pack_details) {
+  if (is.null(pack_details)) return(in_kable)
 
-  if (is.null(data)) return(in_kable)
-
-  for (i in seq_along(data$base)) {
+  for (i in seq_along(pack_details$base)) {
     in_kable <- kableExtra::group_rows(in_kable,
-                                      group_label = paste0(data$base[[i]], ':'),
-                                      start_row = data$start[[i]],
-                                      end_row = data$end[[i]],
+                                      group_label = paste0(pack_details$base[[i]], ':'),
+                                      start_row = pack_details$start[[i]],
+                                      end_row = pack_details$end[[i]],
                                       label_row_css = '',
                                       colnum = 1L,
                                       bold = FALSE)

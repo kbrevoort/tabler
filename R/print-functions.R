@@ -23,8 +23,12 @@ sumtabler2kable <- function(stbl_obj, format = NULL) {
   my_dt <- stbl_obj$var_dt %>%
     mutate(term = ifelse(suffix == '', base, paste0(base, suffix))) %>%
     mutate(tblr_type = 'C') %>%
-    process_omit(stbl_obj$osa$omit) %>%
-    process_alias(stbl_obj) %>%
+    process_omit(stbl_obj$osa$omit)
+
+  if (!all(is.na(stbl_obj$osa$alias)))
+    my_dt <- process_alias(my_dt, stbl_obj)
+
+  my_dt <- my_dt %>%
     mutate(row_num = row_number()) %>%
     list_first('base', 'suffix', 'term', 'tblr_type', 'row_num')
 
@@ -38,7 +42,7 @@ sumtabler2kable <- function(stbl_obj, format = NULL) {
   all_names <- names(for_table_dt)
   names(for_table_dt)[all_names == 'term'] <- '   '
 
-  #pack_detail <- get_pack_details(my_dt, stbl_obj)
+  pack_detail <- get_pack_details(my_dt, stbl_obj)
 
   kableExtra::kable(for_table_dt,
                     caption = stbl_obj$title,
@@ -46,7 +50,7 @@ sumtabler2kable <- function(stbl_obj, format = NULL) {
                     booktabs = stbl_obj$theme$booktabs,
                     escape = TRUE,
                     format = format) %>%
-    do_packing(stbl_obj)
+    do_packing(pack_detail)
 }
 
 #' Process Header Alias
