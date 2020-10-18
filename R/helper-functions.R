@@ -25,9 +25,25 @@ output_coef <- function(var_name, var_pos, coef_list, num_cols) {
 }
 
 num <- function(x, digits = 3L) {
-  sprintf('%%#.%dg', digits) %>%
-    sprintf(x) %>%
-    prettyNum(big.mark = ',')
+  log_val <- log10(x)
+  # Convert to character, where all elements with decimals == digits
+  temp <- sprintf('%%#.0%df', digits) %>%
+    sprintf(x)
+  # Calculate the position in the character where the decimal point is
+  dec_pos <- stringr::str_locate(temp, '\\.') %>%
+    as.data.frame() %>%
+    pull(start)
+
+  # Determine what the length the character should be
+  my_digits <- dplyr::case_when(
+    (dec_pos - 1L) > digits ~ dec_pos - 1L,  # Take everything up to the decimal
+    log_val >= 1 ~ as.integer(digits) + 2L,
+    TRUE ~ as.integer(digits) + 2L)  # compensate for leading zero and decimal point
+
+  # Add a comma for large values, set widths individually
+  prettyNum(substr(temp, 1L, my_digits),
+            big.mark = ',',
+            preserve.width = 'individual')
 }
 
 
