@@ -25,7 +25,8 @@ output_coef <- function(var_name, var_pos, coef_list, num_cols) {
 }
 
 num <- function(x, digits = 3L) {
-  log_val <- log10(x)
+  char_if_negative <- ifelse(x < 0, 1L, as.integer(0))
+  log_val <- log10(abs(x))
   # Convert to character, where all elements with decimals == digits
   temp <- sprintf('%%#.0%df', digits) %>%
     sprintf(x)
@@ -38,7 +39,7 @@ num <- function(x, digits = 3L) {
   my_digits <- dplyr::case_when(
     (dec_pos - 1L) > digits ~ dec_pos - 1L,  # Take everything up to the decimal
     log_val >= 1 ~ as.integer(digits) + 2L,
-    TRUE ~ as.integer(digits) + 2L)  # compensate for leading zero and decimal point
+    TRUE ~ as.integer(digits) + 2L + char_if_negative)  # compensate for leading zero and decimal point
 
   # Add a comma for large values, set widths individually
   prettyNum(substr(temp, 1L, my_digits),
